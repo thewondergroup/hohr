@@ -204,16 +204,16 @@
     font-size: 14px; color: var(--muted); line-height: 1.5; max-width: 56ch;
   }
 
-  /* VALUE STRIP — slim stat row above Patreon KPIs */
+  /* VALUE STRIP — prominent stat blocks above Patreon KPIs */
   .value-strip {
-    display: flex; align-items: baseline; flex-wrap: wrap;
-    gap: 24px;
-    padding: 14px 22px; margin-bottom: 16px;
+    display: flex; align-items: stretch; flex-wrap: wrap;
+    gap: 36px;
+    padding: 18px 24px; margin-bottom: 16px;
     background: color-mix(in srgb, var(--section-color, var(--accent)) 8%, var(--card));
-    border-left: 3px solid var(--section-color, var(--accent));
+    border-left: 4px solid var(--section-color, var(--accent));
   }
   .value-strip-item {
-    display: flex; align-items: baseline; gap: 8px;
+    display: flex; flex-direction: column; gap: 4px; min-width: 0;
   }
   .value-strip-label {
     font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
@@ -221,15 +221,16 @@
   }
   .value-strip-value {
     font-family: var(--display);
-    font-size: 22px; font-weight: 600; color: var(--ink);
+    font-size: 32px; font-weight: 600; color: var(--ink);
     font-variant-numeric: tabular-nums;
+    line-height: 1.05;
   }
   .value-strip-context {
-    font-size: 12px; color: var(--muted);
+    font-size: 12px; color: var(--muted); line-height: 1.3;
   }
   @media (max-width: 720px) {
-    .value-strip { gap: 14px; padding: 12px 16px; }
-    .value-strip-value { font-size: 18px; }
+    .value-strip { gap: 20px; padding: 14px 18px; }
+    .value-strip-value { font-size: 26px; }
   }
 
   /* KPI TILES */
@@ -1649,9 +1650,9 @@ function renderValueStrip() {
   if (ltv) {
     parts.push(`
       <div class="value-strip-item">
-        <span class="value-strip-label">Avg value per sub</span>
+        <span class="value-strip-label">Lifetime value per paid sub</span>
         <span class="value-strip-value">£${ltv}</span>
-        <span class="value-strip-context">· lifetime</span>
+        <span class="value-strip-context">average across all paying subs since launch</span>
       </div>
     `);
   }
@@ -1659,9 +1660,9 @@ function renderValueStrip() {
   if (arpu) {
     parts.push(`
       <div class="value-strip-item">
-        <span class="value-strip-label">Monthly per sub</span>
+        <span class="value-strip-label">Monthly revenue per paid sub</span>
         <span class="value-strip-value">£${arpu.toFixed(2)}</span>
-        <span class="value-strip-context">· current ARPU</span>
+        <span class="value-strip-context">currently active paying subs</span>
       </div>
     `);
   }
@@ -1755,7 +1756,7 @@ function renderMoneyKpis() {
   document.getElementById('money-kpis').innerHTML = [
     renderKpiTile('Patreon MRR', fmt(mrr, 'currency'), mrrDelta,
       totalSubsRes.value !== null ? `Total paid subs: ${fmt(totalSubsRes.value, 'number')}` : 'Awaiting Patreon snapshot'),
-    renderKpiTile(`New subs ${periodLabel}`, fmt(newSubs, 'number'), newSubsDelta,
+    renderKpiTile(`New paid subs ${periodLabel}`, fmt(newSubs, 'number'), newSubsDelta,
       periodSuffix || (latest.meta_spend !== null ? `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}` : 'Awaiting weekly data')),
     renderCancellationsTile(cancels, cancelsDelta, netGrowth, periodSuffix),
     renderCostPerSubTile(cps, cpsDelta),
@@ -1787,7 +1788,7 @@ function renderCancellationsTile(cancels, cancelsDelta, netGrowth, periodSuffix)
 
   return `
     <div class="kpi">
-      <div class="kpi-label">Cancellations</div>
+      <div class="kpi-label">Paid cancellations</div>
       <div class="kpi-value">${cancels !== null ? fmt(cancels, 'number') : '—'}</div>
       ${deltaHtml}
       ${contextHtml}
@@ -1820,7 +1821,7 @@ function renderCostPerSubTile(cps, cpsDelta) {
 
   return `
     <div class="kpi">
-      <div class="kpi-label">Cost per new sub</div>
+      <div class="kpi-label">Cost per new paid sub</div>
       <div class="kpi-value">${cps !== null ? fmt(cps, 'currency-precise') : '—'}</div>
       ${deltaHtml}
       ${contextHtml}
