@@ -364,6 +364,138 @@
   .ltv-pill.bad  { color: var(--bad);  background: var(--bad-bg);  }
   .ltv-pill.flat { color: var(--muted); background: var(--paper-2); }
 
+  /* Card variant of the KPI grid — used on the Overview TL;DR row.
+     Each tile becomes its own rounded card with an accent stripe + drop shadow,
+     and they sit on the page as independent objects rather than a uniform block. */
+  .kpi-grid.cards {
+    display: grid; gap: 14px; border: none; background: transparent;
+    margin-bottom: 24px;
+  }
+  .kpi-grid.cards.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .kpi-grid.cards .kpi {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 22px 22px 20px 22px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    overflow: hidden;
+  }
+  /* In card mode, every card has a full border — override the default
+     .kpi:last-child { border-right: none } that applies to the shared-border layout. */
+  .kpi-grid.cards .kpi:last-child { border-right: 1px solid var(--rule); }
+  /* Accent stripe along the top of each card, coloured by metric family. */
+  .kpi-grid.cards .kpi::before {
+    content: ""; position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: var(--tile-accent, var(--accent));
+  }
+  /* Indent the label slightly so it doesn't sit right on the accent stripe. */
+  .kpi-grid.cards .kpi .kpi-label { margin-top: 4px; }
+
+  /* Accent colour assignments — match the tab colour for each metric's home. */
+  .kpi-grid.cards .kpi[data-tile-accent="listens"] { --tile-accent: #2d7a72; }
+  .kpi-grid.cards .kpi[data-tile-accent="patreon"] { --tile-accent: #5a7a2c; }
+  .kpi-grid.cards .kpi[data-tile-accent="social"]  { --tile-accent: #a64a5e; }
+  .kpi-grid.cards .kpi[data-tile-accent="read"]    { --tile-accent: #b85c00; }
+
+  @media (max-width: 900px) {
+    .kpi-grid.cards.cols-3 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 540px) {
+    .kpi-grid.cards.cols-3 { grid-template-columns: 1fr; }
+  }
+
+  /* AUDIENCE SHAPE — country + app breakdown panels on the Listens tab */
+  .audience-shape {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin-top: 24px;
+  }
+  @media (max-width: 860px) {
+    .audience-shape { grid-template-columns: 1fr; }
+  }
+  .audience-panel {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .audience-panel::before {
+    content: ""; position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: var(--section-color, var(--accent));
+  }
+  .audience-panel-header { margin-bottom: 14px; }
+  .audience-panel-header .label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--section-color, var(--accent));
+    margin-bottom: 4px; margin-top: 4px;
+  }
+  .audience-panel-header h3 {
+    font-family: var(--display);
+    font-size: 19px; font-weight: 500; margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+  }
+  .audience-panel-header p {
+    font-size: 12px; color: var(--muted); margin: 0;
+  }
+  /* Bar list */
+  .bar-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+  }
+  .bar-row:last-of-type { border-bottom: none; }
+  .bar-row-label {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0;
+  }
+  .bar-row-name {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex-shrink: 0;
+    max-width: 140px;
+  }
+  .bar-row-track {
+    flex: 1; min-width: 30px;
+    height: 6px; background: var(--paper-2);
+    border-radius: 3px; overflow: hidden;
+  }
+  .bar-row-fill {
+    height: 100%; background: var(--section-color, var(--accent));
+    transition: width 200ms ease;
+  }
+  .bar-row-pct {
+    font-variant-numeric: tabular-nums; font-weight: 600;
+    color: var(--ink); white-space: nowrap;
+    font-size: 12px;
+  }
+  .bar-row-count {
+    font-size: 11px; color: var(--muted); margin-left: 4px;
+  }
+  .bar-row.rollup {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .bar-row.rollup .bar-row-pct { color: var(--muted); }
+
+  .audience-panel-expand {
+    margin-top: 14px;
+    background: transparent; border: none;
+    font-size: 12px; font-weight: 600;
+    color: var(--section-color, var(--accent));
+    cursor: pointer; padding: 0;
+    letter-spacing: 0.04em;
+  }
+  .audience-panel-expand:hover { text-decoration: underline; }
+  .audience-panel-body.expanded .bar-row.hidden-row { display: grid; }
+  .bar-row.hidden-row { display: none; }
+
   /* IN-PROGRESS BADGE — flags a partial month in the table */
   .in-progress-badge {
     display: inline-block;
@@ -944,7 +1076,7 @@
       </div>
       <div class="section-controls" data-controls-host></div>
     </div>
-    <div class="kpi-grid cols-3" id="read-tldr"></div>
+    <div class="kpi-grid cards cols-3" id="read-tldr"></div>
     <div id="monthly-read-container" style="margin-top: 20px"></div>
   </div>
 
@@ -961,6 +1093,25 @@
       </div>
       <div class="kpi-grid cols-3" id="listens-kpis"></div>
       <div class="charts" id="listens-charts" style="margin-top: 16px"></div>
+
+      <div class="audience-shape" id="audience-shape">
+        <div class="audience-panel" data-panel-kind="locations">
+          <div class="audience-panel-header">
+            <div class="label">Where listeners are</div>
+            <h3>Top countries</h3>
+            <p>Share of lifetime downloads, by listener country.</p>
+          </div>
+          <div class="audience-panel-body" id="locations-body"></div>
+        </div>
+        <div class="audience-panel" data-panel-kind="apps">
+          <div class="audience-panel-header">
+            <div class="label">Where listeners listen</div>
+            <h3>Top podcast apps</h3>
+            <p>Share of lifetime downloads, by listening app.</p>
+          </div>
+          <div class="audience-panel-body" id="apps-body"></div>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -1080,10 +1231,236 @@ const CONFIG = {
   LIFETIME_PATREON_REVENUE: null,
   LIFETIME_PATREON_REVENUE_AS_OF: null,  // e.g. '2026-05-15'
 
-  // Episode count for "avg listeners per episode" computations.
-  // Pending Acast export. Set to null until known.
-  EPISODES_RELEASED_TOTAL: null,         // cumulative episodes since launch
-  EPISODES_PER_MONTH_AVG: null,          // typical monthly release cadence (used for rolling avg)
+  // Episode count — used for per-episode calculations on the Listens tab.
+  // From Acast export: 99 actual episodes + 1 trailer. Update when new episodes drop.
+  EPISODES_RELEASED_TOTAL: 99,           // cumulative episodes since launch (excludes trailer)
+  EPISODES_PER_MONTH_AVG: 2.2,           // ~2 eps/month typical cadence
+
+  // Lifetime downloads by country. From Acast Location export.
+  // Update by re-exporting from Acast > Analytics > Audience > Location.
+  LISTENER_COUNTRIES: [
+    { name: 'United Kingdom', downloads: 480227 },
+    { name: 'United States', downloads: 186827 },
+    { name: 'Canada', downloads: 22239 },
+    { name: 'Australia', downloads: 21155 },
+    { name: 'Netherlands', downloads: 11900 },
+    { name: 'Germany', downloads: 10632 },
+    { name: 'New Zealand', downloads: 7847 },
+    { name: 'Norway', downloads: 7709 },
+    { name: 'Sweden', downloads: 6984 },
+    { name: 'Denmark', downloads: 6823 },
+    { name: 'Ireland', downloads: 6040 },
+    { name: 'France', downloads: 3719 },
+    { name: 'Belgium', downloads: 2618 },
+    { name: 'Spain', downloads: 2463 },
+    { name: 'Finland', downloads: 2145 },
+    { name: 'Austria', downloads: 2034 },
+    { name: 'Japan', downloads: 1999 },
+    { name: 'Poland', downloads: 1983 },
+    { name: 'South Africa', downloads: 1819 },
+    { name: 'Switzerland', downloads: 1701 },
+    { name: 'Singapore', downloads: 1626 },
+    { name: 'Czech Republic', downloads: 1296 },
+    { name: 'Brazil', downloads: 1048 },
+    { name: 'Italy', downloads: 1023 },
+    { name: 'Hong Kong', downloads: 985 },
+    { name: 'Russia', downloads: 938 },
+    { name: 'Philippines', downloads: 881 },
+    { name: 'India', downloads: 840 },
+    { name: 'Thailand', downloads: 791 },
+    { name: 'United Arab Emirates', downloads: 775 },
+    { name: 'Malaysia', downloads: 770 },
+    { name: 'Greece', downloads: 734 },
+    { name: 'Israel', downloads: 619 },
+    { name: 'Colombia', downloads: 592 },
+    { name: 'Argentina', downloads: 543 },
+    { name: 'Guernsey', downloads: 542 },
+    { name: 'Estonia', downloads: 515 },
+    { name: 'Hungary', downloads: 487 },
+    { name: 'Luxembourg', downloads: 444 },
+    { name: 'Bulgaria', downloads: 428 },
+    { name: 'Slovakia', downloads: 384 },
+    { name: 'Malta', downloads: 374 },
+    { name: 'Turkey', downloads: 352 },
+    { name: 'Qatar', downloads: 348 },
+    { name: 'Iceland', downloads: 335 },
+    { name: 'Portugal', downloads: 326 },
+    { name: 'Albania', downloads: 311 },
+    { name: 'Latvia', downloads: 309 },
+    { name: 'Mexico', downloads: 296 },
+    { name: 'Romania', downloads: 295 },
+    { name: 'Lithuania', downloads: 277 },
+    { name: 'Vietnam', downloads: 277 },
+    { name: 'Slovenia', downloads: 264 },
+    { name: 'Faroe Islands', downloads: 256 },
+    { name: 'Cyprus', downloads: 241 },
+    { name: 'Tanzania', downloads: 186 },
+    { name: 'Indonesia', downloads: 171 },
+    { name: 'Isle of Man', downloads: 143 },
+    { name: 'Croatia', downloads: 143 },
+    { name: 'Serbia', downloads: 138 },
+    { name: 'Peru', downloads: 127 },
+    { name: 'Senegal', downloads: 116 },
+    { name: 'Taiwan', downloads: 114 },
+    { name: 'Jersey', downloads: 101 },
+    { name: 'Tunisia', downloads: 96 },
+    { name: 'Korea, Republic Of', downloads: 95 },
+    { name: 'US Virgin Islands', downloads: 94 },
+    { name: 'Kazakhstan', downloads: 88 },
+    { name: 'Zambia', downloads: 85 },
+    { name: 'Chile', downloads: 84 },
+    { name: 'Sri Lanka', downloads: 84 },
+    { name: 'Puerto Rico', downloads: 81 },
+    { name: 'Cambodia', downloads: 80 },
+    { name: 'Antigua and Barbuda', downloads: 78 },
+    { name: 'Algeria', downloads: 74 },
+    { name: 'Nigeria', downloads: 60 },
+    { name: 'Brunei Darussalam', downloads: 57 },
+    { name: 'Ukraine', downloads: 57 },
+    { name: 'Laos', downloads: 56 },
+    { name: 'Costa Rica', downloads: 50 },
+    { name: 'Namibia', downloads: 47 },
+    { name: 'Madagascar', downloads: 43 },
+    { name: 'Barbados', downloads: 42 },
+    { name: 'Bosnia And Herzegowina', downloads: 39 },
+    { name: 'Falkland Islands', downloads: 37 },
+    { name: 'Egypt', downloads: 37 },
+    { name: 'Guam', downloads: 34 },
+    { name: 'Mongolia', downloads: 32 },
+    { name: 'Andorra', downloads: 28 },
+    { name: 'El Salvador', downloads: 28 },
+    { name: 'Guatemala', downloads: 26 },
+    { name: 'Morocco', downloads: 26 },
+    { name: 'Ecuador', downloads: 20 },
+    { name: 'Cape Verde', downloads: 20 },
+    { name: 'Iraq', downloads: 20 },
+    { name: 'Fiji', downloads: 20 },
+    { name: 'Dominican Republic', downloads: 20 },
+    { name: 'Monaco', downloads: 19 },
+    { name: 'Saudi Arabia', downloads: 18 },
+    { name: 'Bangladesh', downloads: 17 },
+    { name: 'Jamaica', downloads: 16 },
+    { name: 'Nepal', downloads: 16 },
+    { name: 'Pakistan', downloads: 16 },
+    { name: 'Trinidad And Tobago', downloads: 15 },
+    { name: 'Nicaragua', downloads: 12 },
+    { name: 'Ghana', downloads: 10 },
+    { name: 'Georgia', downloads: 10 },
+    { name: 'Venezuela', downloads: 10 },
+    { name: 'Bhutan', downloads: 10 },
+    { name: 'Uzbekistan', downloads: 9 },
+    { name: 'Iran', downloads: 9 },
+    { name: 'Kenya', downloads: 9 },
+    { name: 'Bolivia', downloads: 9 },
+    { name: 'Oman', downloads: 9 },
+    { name: 'Réunion', downloads: 8 },
+    { name: 'Belize', downloads: 8 },
+    { name: 'Uruguay', downloads: 7 },
+    { name: 'Chad', downloads: 6 },
+    { name: 'Azerbaijan', downloads: 6 },
+    { name: 'Armenia', downloads: 6 },
+    { name: 'Mauritius', downloads: 6 },
+    { name: 'Uganda', downloads: 6 },
+    { name: 'Panama', downloads: 6 },
+    { name: 'Maldives', downloads: 5 },
+    { name: 'Mozambique', downloads: 5 },
+    { name: 'Montenegro', downloads: 5 },
+    { name: 'Gibraltar', downloads: 5 },
+    { name: 'Saint Kitts and Nevis', downloads: 5 },
+    { name: 'Saint Lucia', downloads: 5 },
+    { name: 'Paraguay', downloads: 4 },
+    { name: 'Lebanon', downloads: 4 },
+    { name: 'Kuwait', downloads: 4 },
+    { name: 'Cayman Islands', downloads: 4 },
+    { name: 'Belarus', downloads: 4 },
+    { name: 'Togo', downloads: 3 },
+    { name: 'Anguilla', downloads: 3 },
+    { name: 'Jordan', downloads: 3 },
+    { name: 'Aruba', downloads: 3 },
+    { name: 'Bermuda', downloads: 3 },
+    { name: 'Macao', downloads: 3 },
+    { name: 'Macedonia', downloads: 3 },
+    { name: 'China', downloads: 2 },
+    { name: 'Angola', downloads: 2 },
+    { name: 'Ethiopia', downloads: 2 },
+    { name: 'Martinique', downloads: 2 },
+    { name: 'Moldova', downloads: 2 },
+    { name: 'Malawi', downloads: 2 },
+    { name: 'Swaziland', downloads: 2 },
+    { name: 'Cote D Ivoire', downloads: 1 },
+    { name: 'Cuba', downloads: 1 },
+    { name: 'Burundi', downloads: 1 },
+    { name: 'Afghanistan', downloads: 1 },
+    { name: 'Rwanda', downloads: 1 },
+    { name: 'Myanmar (Burma)', downloads: 1 },
+    { name: 'Honduras', downloads: 1 },
+    { name: 'Libyan Arab Jamahiriya', downloads: 1 },
+    { name: 'Greenland', downloads: 1 },
+    { name: 'Turkmenistan', downloads: 1 },
+    { name: 'Sierra Leone', downloads: 1 },
+    { name: 'Tajikistan', downloads: 1 },
+    { name: 'Saint-Barthélemy', downloads: 1 },
+    { name: 'Bahrain', downloads: 1 },
+    { name: 'Cook Islands', downloads: 1 },
+    { name: 'Liechtenstein', downloads: 1 },
+    { name: 'Palestinian Territory', downloads: 1 },
+    { name: 'French Polynesia', downloads: 1 },
+    { name: 'Turks and Caicos Islands', downloads: 1 },
+    { name: 'Wallis and Futuna Islands', downloads: 1 },
+  ],
+
+  // Lifetime downloads by podcast app. From Acast Podcast App export.
+  // Update by re-exporting from Acast > Analytics > Audience > Apps.
+  LISTENER_APPS: [
+    { name: 'Spotify', downloads: 397040 },
+    { name: 'Apple Podcasts', downloads: 193370 },
+    { name: 'Amazon Music', downloads: 32111 },
+    { name: 'Pocket Casts', downloads: 31439 },
+    { name: 'Other', downloads: 20594 },
+    { name: 'Chrome', downloads: 18973 },
+    { name: 'Podcast Addict', downloads: 17337 },
+    { name: 'CastBox', downloads: 14872 },
+    { name: 'Podbean', downloads: 13474 },
+    { name: 'Overcast', downloads: 13005 },
+    { name: 'Audible', downloads: 7830 },
+    { name: 'Google Podcasts', downloads: 7591 },
+    { name: 'AntennaPod', downloads: 6964 },
+    { name: 'Alexa', downloads: 6414 },
+    { name: 'Chromecast device', downloads: 4211 },
+    { name: 'YouTube Music', downloads: 4125 },
+    { name: 'Acast embed-player', downloads: 3790 },
+    { name: 'Undefined Android podcast apps', downloads: 3272 },
+    { name: 'Podcast Republic', downloads: 2174 },
+    { name: 'Undefined iOS podcast app', downloads: 1984 },
+    { name: 'Player FM', downloads: 1805 },
+    { name: 'Firefox', downloads: 1467 },
+    { name: 'Deezer', downloads: 1439 },
+    { name: 'Podcast Guru', downloads: 1317 },
+    { name: 'Downcast', downloads: 1233 },
+    { name: 'Safari', downloads: 864 },
+    { name: 'Opera', downloads: 626 },
+    { name: 'Edge', downloads: 530 },
+    { name: 'DoggCatcher', downloads: 374 },
+    { name: 'BeyondPod', downloads: 366 },
+    { name: 'Castro', downloads: 344 },
+    { name: 'Windows Media Player', downloads: 334 },
+    { name: 'Sonos', downloads: 321 },
+    { name: 'RSS Radio', downloads: 296 },
+    { name: 'Podimo', downloads: 217 },
+    { name: 'Facebook', downloads: 184 },
+    { name: 'Microsoft Xbox', downloads: 149 },
+    { name: 'Apple Podcasts (Watch)', downloads: 122 },
+    { name: 'iVoox', downloads: 98 },
+    { name: 'Samsung Podcasts', downloads: 78 },
+    { name: 'JioSaavn', downloads: 69 },
+    { name: 'Podkicker Pro', downloads: 31 },
+    { name: 'Goodpods', downloads: 28 },
+    { name: 'Radio.de', downloads: 13 },
+    { name: 'Internet Explorer', downloads: 9 },
+    { name: 'TuneIn', downloads: 7 },
+    { name: 'Podplay', downloads: 2 },
+    { name: 'Headliner', downloads: 1 },
+  ],
 
   // Tier mix — updated quarterly from Patreon snapshot
   TIER_MIX: [
@@ -1359,8 +1736,12 @@ function aggregateMonthly(weekly) {
   const additive = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations',
                     'new_ig_follows', 'new_fb_follows',
                     'ig_views', 'fb_views',
-                    'ig_link_clicks', 'fb_link_clicks'];
-  const stock = ['monthly_listens', 'patreon_total_subs', 'patreon_mrr',
+                    'ig_link_clicks', 'fb_link_clicks',
+                    'monthly_listens'];
+  // Note: 'monthly_listens' was previously a stock metric (cumulative monthly total entered once per month).
+  // Since the Acast import (May 2026), it's a weekly flow: each row holds that week's listener count.
+  // Summed across weeks in a month, it gives the true monthly listener total.
+  const stock = ['patreon_total_subs', 'patreon_mrr',
                  'ig_followers', 'fb_followers', 'tiktok_followers'];
 
   // Bucket weeks into months by day-level overlap
@@ -1533,13 +1914,28 @@ function renderReadTldr() {
   const cur = data[idx];
   const visible = data.slice(0, idx + 1);
 
-  // 1. Total listens
-  const listensRes = latestValue(visible, 'monthly_listens');
+  // 1. Total listens this period (sum of weekly listener counts in the month)
+  const listensValue = cur.monthly_listens;
+  const listensIsPartial = state.view === 'monthly' ? !!cur.in_progress : isWeekInProgress(cur);
+  let listensYoyHtml = '';
+  // YoY pill — compare this month's listener total against the same month last year.
+  // Suppressed on in-progress periods (denominator hasn't settled) and where prior year is missing.
+  if (state.view === 'monthly' && !listensIsPartial && listensValue !== null) {
+    const prior = priorYearMonth(data, cur.month);
+    if (prior && prior.monthly_listens && prior.monthly_listens > 0) {
+      listensYoyHtml = yoyPill(listensValue, prior.monthly_listens, { priorLabel: fmtMonthLabel(prior.month + '-01') });
+    }
+  }
+  const listensContextLine = state.view === 'weekly' ? 'This week' : 'This month';
+  const listensContext = listensValue !== null
+    ? (listensYoyHtml ? `${listensContextLine}<br>${listensYoyHtml}` : listensContextLine)
+    : 'Awaiting podcast host data';
   const listensTile = renderKpiTile(
     'Total listens',
-    listensRes.value !== null ? fmt(listensRes.value, 'number') : '—',
+    listensValue !== null ? fmt(listensValue, 'number') : '—',
     null,
-    listensRes.value !== null ? 'Across all platforms' : 'Awaiting podcast host data'
+    listensContext,
+    'listens'
   );
 
   // 2. Patreon MRR
@@ -1553,7 +1949,8 @@ function renderReadTldr() {
     'Patreon MRR',
     mrrRes.value !== null ? fmt(mrrRes.value, 'currency') : '—',
     mrrDelta,
-    mrrRes.value !== null ? 'Monthly recurring revenue' : 'Awaiting Patreon snapshot'
+    mrrRes.value !== null ? 'Monthly recurring revenue' : 'Awaiting Patreon snapshot',
+    'patreon'
   );
 
   // 3. Net paid sub growth (new subs - cancellations) for the current period
@@ -1567,10 +1964,11 @@ function renderReadTldr() {
       'Net paid growth',
       `${sign}${net}`,
       null,
-      `<span class="ltv-pill ${cls}">${ns} joined · ${ca} left</span>`
+      `<span class="ltv-pill ${cls}">${ns} joined · ${ca} left</span>`,
+      'patreon'
     );
   } else {
-    netSubsTile = renderKpiTile('Net paid growth', '—', null, 'Awaiting Patreon data');
+    netSubsTile = renderKpiTile('Net paid growth', '—', null, 'Awaiting Patreon data', 'patreon');
   }
 
   const isInProgress = state.view === 'monthly'
@@ -1585,13 +1983,15 @@ function renderReadTldr() {
     }
   }
 
-  // 4. Average listeners per episode — placeholder until Acast lands.
-  // Plan: use a 30-day-rolling average computed from Acast episode-level data.
-  const avgListensTile = renderKpiTile(
-    'Avg listeners per episode',
-    '—',
+  // 4. Lifetime listens — sum of all weekly listener counts across the full sheet.
+  // Updates automatically as more weeks accumulate.
+  const lifetimeListens = state.weekly.reduce((s, w) => s + (w.monthly_listens || 0), 0);
+  const lifetimeListensTile = renderKpiTile(
+    'Lifetime listens',
+    lifetimeListens > 0 ? fmt(lifetimeListens, 'number') : '—',
     null,
-    'Awaiting Acast export'
+    lifetimeListens > 0 ? 'Since launch · Oct 2022' : 'Awaiting podcast host data',
+    'listens'
   );
 
   // 5. Cost per new paid sub — meta_spend / new_patreon_subs for this period.
@@ -1609,12 +2009,13 @@ function renderReadTldr() {
       'Cost per new paid sub',
       '£' + cpa.toFixed(2),
       null,
-      `<span class="ltv-pill ${cls}">${ratio}x LTV (£${ltv} avg)</span>`
+      `<span class="ltv-pill ${cls}">${ratio}x LTV (£${ltv} avg)</span>`,
+      'social'
     );
   } else if (isInProgress) {
-    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, partialSuffix);
+    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, partialSuffix, 'social');
   } else {
-    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, 'Awaiting full month data');
+    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, 'Awaiting full month data', 'social');
   }
 
   // 6. Lifetime Patreon revenue — cumulative since launch.
@@ -1627,12 +2028,13 @@ function renderReadTldr() {
     'Lifetime Patreon revenue',
     lifetimeRev !== null ? fmt(lifetimeRev, 'currency') : '—',
     null,
-    lifetimeContext
+    lifetimeContext,
+    'patreon'
   );
 
-  // Layout: Row 1 (audience) — Listens, Avg/ep, MRR.
-  //         Row 2 (monetisation) — Net growth, Cost per sub, Lifetime revenue.
-  c.innerHTML = [listensTile, avgListensTile, mrrTile, netSubsTile, cpaTile, lifetimeRevTile].join('');
+  // Layout: Row 1 (audience) — Listens this period, Lifetime listens, MRR.
+  //         Row 2 (monetisation) — Net growth, Cost per sub, Lifetime Patreon revenue.
+  c.innerHTML = [listensTile, lifetimeListensTile, mrrTile, netSubsTile, cpaTile, lifetimeRevTile].join('');
 }
 
 /* RENDER: GROWTH HISTORY — 3+ years of monthly joiners */
@@ -1882,11 +2284,12 @@ function renderTierMix() {
 }
 
 /* RENDER: KPI TILE */
-function renderKpiTile(label, value, deltaInfo, context) {
+function renderKpiTile(label, value, deltaInfo, context, accent) {
   const deltaHtml = deltaInfo ? `<div><span class="kpi-delta ${deltaInfo.cls}">${deltaInfo.text}</span></div>` : '';
   const contextHtml = context ? `<div class="kpi-context">${context}</div>` : '';
+  const accentAttr = accent ? ` data-tile-accent="${accent}"` : '';
   return `
-    <div class="kpi">
+    <div class="kpi"${accentAttr}>
       <div class="kpi-label">${label}</div>
       <div class="kpi-value">${value}</div>
       ${deltaHtml}
@@ -2146,40 +2549,179 @@ function renderKpiGroup(containerId, metrics) {
 function renderListensKpis() {
   const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
   const focused = focusedIndex(data);
-  const visible = focused >= 0 ? data.slice(0, focused + 1) : data;
+  const cur = focused >= 0 ? data[focused] : null;
+  if (!cur) {
+    document.getElementById('listens-kpis').innerHTML =
+      '<div class="empty-state" style="grid-column:1/-1">No data yet</div>';
+    return;
+  }
 
-  const totalListens = latestValue(visible, 'monthly_listens');
+  // 1. Total listens for the focused period — sum of weekly buckets, post-aggregation.
+  const listensValue = cur.monthly_listens;
+  const isInProgress = state.view === 'monthly' ? !!cur.in_progress : isWeekInProgress(cur);
 
-  // Total listens (the one real metric).
-  // Suppress delta on in-progress periods — partial-vs-full comparisons mislead.
-  let totalDelta = null;
-  let totalContext = 'Across all platforms';
-  if (totalListens.value !== null) {
-    const curRow = visible[totalListens.index];
-    const isInProgress = state.view === 'monthly'
-      ? !!(curRow && curRow.in_progress)
-      : isWeekInProgress(curRow);
-    if (isInProgress) {
-      if (state.view === 'monthly') {
-        totalContext = `${curRow.days_with_data} of ${curRow.days_in_month} days · in progress`;
-      } else {
-        totalContext = `${weekDaysWithData(curRow)} of 7 days · in progress`;
-      }
-    } else if (totalListens.index > 0) {
-      const earlier = latestValue(visible.slice(0, totalListens.index), 'monthly_listens');
-      if (earlier.value !== null) totalDelta = fmtDelta(totalListens.value, earlier.value);
+  // MoM delta (previous period's total)
+  let listensDelta = null;
+  if (listensValue !== null && !isInProgress && focused > 0) {
+    const prev = data[focused - 1];
+    if (prev && prev.monthly_listens !== null) {
+      listensDelta = fmtDelta(listensValue, prev.monthly_listens);
     }
+  }
+
+  // YoY pill (same month last year)
+  let listensYoyHtml = '';
+  if (state.view === 'monthly' && !isInProgress && listensValue !== null) {
+    const prior = priorYearMonth(data, cur.month);
+    if (prior && prior.monthly_listens && prior.monthly_listens > 0) {
+      listensYoyHtml = yoyPill(listensValue, prior.monthly_listens, { priorLabel: fmtMonthLabel(prior.month + '-01') });
+    }
+  }
+
+  let listensContext;
+  if (listensValue === null) {
+    listensContext = 'Awaiting podcast host data';
+  } else if (isInProgress) {
+    listensContext = state.view === 'monthly'
+      ? `${cur.days_with_data} of ${cur.days_in_month} days · in progress`
+      : `${weekDaysWithData(cur)} of 7 days · in progress`;
+  } else {
+    const base = state.view === 'weekly' ? 'This week' : 'This month';
+    listensContext = listensYoyHtml ? `${base}<br>${listensYoyHtml}` : base;
+  }
+
+  // 2. Lifetime listens — sum across all weekly rows that have data.
+  const lifetimeListens = state.weekly.reduce((s, w) => s + (w.monthly_listens || 0), 0);
+
+  // 3. Best month ever — for context. Compares all completed months.
+  const monthly = aggregateMonthly(state.weekly);
+  const completedMonths = monthly.filter(m => !m.in_progress && m.monthly_listens !== null && m.monthly_listens > 0);
+  let bestMonthTile;
+  if (completedMonths.length > 0) {
+    const best = completedMonths.reduce((a, b) => a.monthly_listens > b.monthly_listens ? a : b);
+    bestMonthTile = renderKpiTile(
+      'Best month ever',
+      fmt(best.monthly_listens, 'number'),
+      null,
+      fmtMonthLabel(best.month + '-01')
+    );
+  } else {
+    bestMonthTile = renderKpiTile('Best month ever', '—', null, 'Awaiting data');
   }
 
   document.getElementById('listens-kpis').innerHTML = [
     renderKpiTile('Total listens',
-      totalListens.value !== null ? fmt(totalListens.value, 'number') : '—',
-      totalDelta,
-      totalListens.value !== null ? totalContext : 'Awaiting podcast host data'),
-    renderKpiTile('Spotify listens', '—', null, 'Awaiting Spotify for Podcasters'),
-    renderKpiTile('Apple listens', '—', null, 'Awaiting Apple Podcasts Connect'),
+      listensValue !== null ? fmt(listensValue, 'number') : '—',
+      listensDelta,
+      listensContext),
+    renderKpiTile('Lifetime listens',
+      lifetimeListens > 0 ? fmt(lifetimeListens, 'number') : '—',
+      null,
+      lifetimeListens > 0 ? 'Since launch · Oct 2022' : 'Awaiting podcast host data'),
+    bestMonthTile,
   ].join('');
 }
+
+/* RENDER: AUDIENCE SHAPE — Locations + Apps panels on the Listens tab.
+   Both are bar-list views of CONFIG.LISTENER_COUNTRIES and CONFIG.LISTENER_APPS,
+   sorted descending by downloads. Bar widths scaled relative to the top item
+   for legibility (otherwise the UK's 59% swamps every other bar).
+   Percentages shown are share of total, not relative width. */
+function renderAudienceShape() {
+  renderAudiencePanel('locations-body', CONFIG.LISTENER_COUNTRIES, {
+    visible: 5,
+    rollupLabel: 'Rest of the world',
+  });
+  renderAudiencePanel('apps-body', CONFIG.LISTENER_APPS, {
+    visible: 10,
+    rollupLabel: 'Long tail (other apps)',
+  });
+}
+
+function renderAudiencePanel(containerId, items, opts) {
+  const host = document.getElementById(containerId);
+  if (!host) return;
+  if (!items || items.length === 0) {
+    host.innerHTML = '<div class="empty-state">No data</div>';
+    return;
+  }
+
+  const total = items.reduce((s, it) => s + (it.downloads || 0), 0);
+  const topDownloads = items[0].downloads || 1; // for relative bar widths
+  const visibleCount = Math.min(opts.visible, items.length);
+  const visibleItems = items.slice(0, visibleCount);
+  const hiddenItems = items.slice(visibleCount);
+
+  // Top-N rows (always visible)
+  const visibleRows = visibleItems.map(it => buildBarRow(it, total, topDownloads, false)).join('');
+
+  // Rollup row: sum the long tail into one
+  let rollupRow = '';
+  if (hiddenItems.length > 0) {
+    const rollupTotal = hiddenItems.reduce((s, it) => s + (it.downloads || 0), 0);
+    const rollupPct = (rollupTotal / total) * 100;
+    const rollupWidth = (rollupTotal / topDownloads) * 100;
+    rollupRow = `
+      <div class="bar-row rollup">
+        <div class="bar-row-label">
+          <span class="bar-row-name">${opts.rollupLabel} (${hiddenItems.length})</span>
+          <span class="bar-row-track"><span class="bar-row-fill" style="width:${rollupWidth.toFixed(1)}%; opacity: 0.5"></span></span>
+        </div>
+        <div>
+          <span class="bar-row-pct">${rollupPct.toFixed(1)}%</span>
+          <span class="bar-row-count">${fmt(rollupTotal, 'number')}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Hidden full-list rows
+  const hiddenRows = hiddenItems.map(it => buildBarRow(it, total, topDownloads, true)).join('');
+
+  // Expand button
+  const expandBtn = hiddenItems.length > 0
+    ? `<button class="audience-panel-expand" data-audience-expand>Show all ${items.length} (currently hiding ${hiddenItems.length})</button>`
+    : '';
+
+  host.innerHTML = visibleRows + rollupRow + hiddenRows + expandBtn;
+}
+
+function buildBarRow(item, total, topDownloads, hidden) {
+  const pct = (item.downloads / total) * 100;
+  const widthPct = (item.downloads / topDownloads) * 100;
+  // Format percentage: 1 decimal place for items >= 0.1%, else show as <0.1%
+  const pctText = pct >= 0.1 ? pct.toFixed(1) + '%' : '<0.1%';
+  return `
+    <div class="bar-row ${hidden ? 'hidden-row' : ''}">
+      <div class="bar-row-label">
+        <span class="bar-row-name" title="${item.name}">${item.name}</span>
+        <span class="bar-row-track"><span class="bar-row-fill" style="width:${widthPct.toFixed(2)}%"></span></span>
+      </div>
+      <div>
+        <span class="bar-row-pct">${pctText}</span>
+        <span class="bar-row-count">${fmt(item.downloads, 'number')}</span>
+      </div>
+    </div>
+  `;
+}
+
+// Delegated click handler for the expand button — toggles the .expanded class on the panel body
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-audience-expand]');
+  if (!btn) return;
+  const body = btn.closest('.audience-panel-body');
+  if (!body) return;
+  const isExpanded = body.classList.toggle('expanded');
+  const hiddenCount = body.querySelectorAll('.bar-row.hidden-row').length;
+  const total = body.querySelectorAll('.bar-row:not(.rollup)').length;
+  // Update button label to reflect state
+  btn.textContent = isExpanded
+    ? `Hide ${hiddenCount} (showing all ${total})`
+    : `Show all ${total} (currently hiding ${hiddenCount})`;
+  // Hide the rollup row when expanded — otherwise we're showing the long tail twice
+  const rollup = body.querySelector('.bar-row.rollup');
+  if (rollup) rollup.style.display = isExpanded ? 'none' : '';
+});
 
 /* RENDER: AUDIENCE / SOCIAL KPIs */
 function renderAudienceKpis() {
@@ -2497,6 +3039,7 @@ function renderAll() {
     case 'listens':
       renderListensKpis();
       renderListensCharts();
+      renderAudienceShape();
       break;
     case 'patreon':
       renderValueStrip();
