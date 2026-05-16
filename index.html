@@ -974,7 +974,7 @@ const CONFIG = {
   },
 };
 
-let state = { view: 'monthly', selectedMonth: null, activeTab: 'read', weekly: [], campaigns: [] };
+let state = { view: 'monthly', selectedMonth: null, selectedWeek: null, activeTab: 'read', weekly: [], campaigns: [] };
 
 /* CSV PARSING */
 function parseCSV(text) {
@@ -1034,6 +1034,50 @@ function latestValue(data, key) {
   }
   return { value: null, index: -1 };
 }
+
+/* Pick the index of the row currently in focus, based on view + state.
+   - Weekly view: matches state.selectedWeek (or latest if not set)
+   - Monthly view: matches state.selectedMonth (or latest if not set)
+   Falls back to the latest row if no match. */
+function focusedIndex(data) {
+  if (data.length === 0) return -1;
+  if (state.view === 'weekly') {
+    if (state.selectedWeek) {
+      const i = data.findIndex(d => d.week_starting === state.selectedWeek);
+      if (i >= 0) return i;
+    }
+  } else {
+    if (state.selectedMonth) {
+      const i = data.findIndex(d => d.month === state.selectedMonth);
+      if (i >= 0) return i;
+    }
+  }
+  return data.length - 1;
+}
+
+/* Is a given weekly row 'in progress' — i.e. its 7-day window extends past today? */
+function isWeekInProgress(row) {
+  if (!row || !row.week_starting) return false;
+  const [y, m, d] = row.week_starting.split('-').map(Number);
+  const weekStart = new Date(Date.UTC(y, m - 1, d));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  const now = new Date();
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return todayUTC < weekEnd;
+}
+
+/* How many days of a 7-day week have been completed (inclusive of today)? */
+function weekDaysWithData(row) {
+  if (!row || !row.week_starting) return 7;
+  const [y, m, d] = row.week_starting.split('-').map(Number);
+  const weekStart = new Date(Date.UTC(y, m - 1, d));
+  const now = new Date();
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const diffDays = Math.floor((todayUTC - weekStart) / 86400000) + 1;
+  return Math.max(1, Math.min(7, diffDays));
+}
+
 function fmtDelta(curr, prev) {
   if (curr === null || prev === null || prev === 0) return { text: '—', cls: 'flat' };
   const diff = curr - prev;
@@ -1235,12 +1279,8 @@ function renderReadTldr() {
     return;
   }
 
-  // Use selected month in monthly view, latest in weekly view
-  let idx = data.length - 1;
-  if (state.view === 'monthly' && state.selectedMonth) {
-    const i = data.findIndex(d => d.month === state.selectedMonth);
-    if (i >= 0) idx = i;
-  }
+  // Pick the focused period (selected month/week or latest)
+  const idx = focusedIndex(data);
   const cur = data[idx];
   const visible = data.slice(0, idx + 1);
 
@@ -1284,10 +1324,17 @@ function renderReadTldr() {
     netSubsTile = renderKpiTile('Net paid growth', '—', null, 'Awaiting Patreon data');
   }
 
-  const isInProgress = state.view === 'monthly' && cur.in_progress;
-  const partialSuffix = isInProgress
-    ? `${cur.days_with_data} of ${cur.days_in_month} days · in progress`
-    : null;
+  const isInProgress = state.view === 'monthly'
+    ? !!cur.in_progress
+    : isWeekInProgress(cur);
+  let partialSuffix = null;
+  if (isInProgress) {
+    if (state.view === 'monthly') {
+      partialSuffix = `${cur.days_with_data} of ${cur.days_in_month} days · in progress`;
+    } else {
+      partialSuffix = `${weekDaysWithData(cur)} of 7 days · in progress`;
+    }
+  }
 
   // 4. Ad spend this period
   const spend = cur.meta_spend;
@@ -1575,21 +1622,25 @@ function renderMoneyKpis() {
   }
 
   // In monthly view, pick the row matching selectedMonth (default to latest if not set)
-  let latestIdx = data.length - 1;
-  if (state.view === 'monthly' && state.selectedMonth) {
-    const idx = data.findIndex(d => d.month === state.selectedMonth);
-    if (idx >= 0) latestIdx = idx;
-  }
+  const latestIdx = focusedIndex(data);
   const latest = data[latestIdx];
   const prev = latestIdx > 0 ? data[latestIdx - 1] : null;
   const periodLabel = state.view === 'weekly' ? 'this week' : 'this month';
-  const isInProgress = state.view === 'monthly' && latest.in_progress;
-  // When the displayed month is partial, suppress all flow-metric deltas — comparing
-  // a partial period to a complete one (or even a same-period slice) tends to read
-  // as alarming red even when nothing's wrong. Wait for the month to complete.
-  const periodSuffix = isInProgress
-    ? `${latest.days_with_data} of ${latest.days_in_month} days · in progress`
-    : null;
+  // In-progress detection works for both views
+  const isInProgress = state.view === 'monthly'
+    ? !!latest.in_progress
+    : isWeekInProgress(latest);
+  // When the displayed period is partial, suppress all flow-metric deltas — comparing
+  // a partial period to a complete one tends to read as alarming red even when
+  // nothing's wrong. Wait for the period to complete.
+  let periodSuffix = null;
+  if (isInProgress) {
+    if (state.view === 'monthly') {
+      periodSuffix = `${latest.days_with_data} of ${latest.days_in_month} days · in progress`;
+    } else {
+      periodSuffix = `${weekDaysWithData(latest)} of 7 days · in progress`;
+    }
+  }
 
   // Stock metrics: walk back to last non-null value UP TO and including the selected period.
   // Stock-metric deltas (MRR, total subs) ARE fair to show because they're point-in-time
@@ -1722,15 +1773,12 @@ function renderKpiGroup(containerId, metrics) {
     return;
   }
 
-  // In monthly view, slice data up to the selected month so the KPI reflects that period
-  let visible = data;
-  if (state.view === 'monthly' && state.selectedMonth) {
-    const idx = data.findIndex(d => d.month === state.selectedMonth);
-    if (idx >= 0) visible = data.slice(0, idx + 1);
-  }
+  // Slice data up to the focused period so the KPI reflects that period
+  const focused = focusedIndex(data);
+  const visible = data.slice(0, focused + 1);
 
   // Each metric: latest known value + delta vs previous known value.
-  // For in-progress months we suppress the delta — comparing partial-period numbers
+  // For in-progress periods we suppress the delta — comparing partial-period numbers
   // against complete-period numbers tends to read alarmingly red even when nothing's wrong.
   // The "X of Y days · in progress" subtitle provides the context.
   function kpiFor(key, label) {
@@ -1742,11 +1790,17 @@ function renderKpiGroup(containerId, metrics) {
     let context = '';
 
     const curRow = visible[cur.index];
-    const isInProgress = state.view === 'monthly' && curRow && curRow.in_progress;
+    const isInProgress = state.view === 'monthly'
+      ? !!(curRow && curRow.in_progress)
+      : isWeekInProgress(curRow);
 
     if (isInProgress) {
-      context = `${curRow.days_with_data} of ${curRow.days_in_month} days · in progress`;
-      // Intentionally no delta: wait for the month to complete.
+      if (state.view === 'monthly') {
+        context = `${curRow.days_with_data} of ${curRow.days_in_month} days · in progress`;
+      } else {
+        context = `${weekDaysWithData(curRow)} of 7 days · in progress`;
+      }
+      // Intentionally no delta: wait for the period to complete.
     } else if (cur.index > 0) {
       const earlier = latestValue(visible.slice(0, cur.index), key);
       if (earlier.value !== null) delta = fmtDelta(cur.value, earlier.value);
@@ -1760,27 +1814,26 @@ function renderKpiGroup(containerId, metrics) {
 /* RENDER: LISTENS KPIs */
 function renderListensKpis() {
   const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
-  let visible = data;
-  if (state.view === 'monthly' && state.selectedMonth) {
-    const idx = data.findIndex(d => d.month === state.selectedMonth);
-    if (idx >= 0) visible = data.slice(0, idx + 1);
-  }
+  const focused = focusedIndex(data);
+  const visible = focused >= 0 ? data.slice(0, focused + 1) : data;
 
   const totalListens = latestValue(visible, 'monthly_listens');
 
-  function listensTile(label, value, delta, context) {
-    return renderKpiTile(label, value, delta, context);
-  }
-
   // Total listens (the one real metric).
-  // Suppress delta on in-progress months — partial-vs-full comparisons mislead.
+  // Suppress delta on in-progress periods — partial-vs-full comparisons mislead.
   let totalDelta = null;
   let totalContext = 'Across all platforms';
   if (totalListens.value !== null) {
     const curRow = visible[totalListens.index];
-    const isInProgress = state.view === 'monthly' && curRow && curRow.in_progress;
+    const isInProgress = state.view === 'monthly'
+      ? !!(curRow && curRow.in_progress)
+      : isWeekInProgress(curRow);
     if (isInProgress) {
-      totalContext = `${curRow.days_with_data} of ${curRow.days_in_month} days · in progress`;
+      if (state.view === 'monthly') {
+        totalContext = `${curRow.days_with_data} of ${curRow.days_in_month} days · in progress`;
+      } else {
+        totalContext = `${weekDaysWithData(curRow)} of 7 days · in progress`;
+      }
     } else if (totalListens.index > 0) {
       const earlier = latestValue(visible.slice(0, totalListens.index), 'monthly_listens');
       if (earlier.value !== null) totalDelta = fmtDelta(totalListens.value, earlier.value);
@@ -1851,18 +1904,19 @@ function renderChart(metric, data) {
   const xLabels = xLabelIndices.map(i =>
     `<text class="axis-label" x="${xScale(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${points[i].label}</text>`).join('');
   const dots = points.map((p, i) => {
-    const isSelected = state.view === 'monthly' && p.x === state.selectedMonth;
+    const selectedX = state.view === 'monthly' ? state.selectedMonth : state.selectedWeek;
+    const isSelected = selectedX && p.x === selectedX;
     const r = isSelected ? 5 : 3;
     const cls = isSelected ? 'data-point selected' : 'data-point';
     return `<circle class="${cls}" cx="${xScale(i).toFixed(1)}" cy="${yScale(p.y).toFixed(1)}" r="${r}"
       data-label="${p.label}: ${fmt(p.y, metric.format)}"></circle>`;
   }).join('');
 
-  // In monthly view, show the selected month's value as the headline.
-  // In weekly view, show the latest week's value.
+  // Headline value reflects the focused period (selected week/month or latest).
   let currentValue;
-  if (state.view === 'monthly' && state.selectedMonth) {
-    const sel = points.find(p => p.x === state.selectedMonth);
+  const selectedX = state.view === 'monthly' ? state.selectedMonth : state.selectedWeek;
+  if (selectedX) {
+    const sel = points.find(p => p.x === selectedX);
     currentValue = sel ? sel.y : points[points.length - 1].y;
   } else {
     currentValue = points[points.length - 1].y;
@@ -2048,35 +2102,62 @@ function renderAll() {
 }
 
 /* RENDER: MONTH PICKER */
-// Build the section-control bar: Weekly/Monthly toggle + month picker (when monthly).
+// Build the section-control bar: Weekly/Monthly toggle + period picker.
 // Renders into every <div data-controls-host> on the page; uses event delegation for clicks.
 function renderSectionControls() {
   const hosts = document.querySelectorAll('[data-controls-host]');
   if (hosts.length === 0) return;
 
-  const months = aggregateMonthly(state.weekly);
   let pickerHtml = '';
-  if (state.view === 'monthly' && months.length > 0) {
-    // Default selectedMonth to the latest if not set or no longer in data
-    if (!state.selectedMonth || !months.some(m => m.month === state.selectedMonth)) {
-      state.selectedMonth = months[months.length - 1].month;
+
+  if (state.view === 'monthly') {
+    const months = aggregateMonthly(state.weekly);
+    if (months.length > 0) {
+      // Default selectedMonth to the latest if not set or no longer in data
+      if (!state.selectedMonth || !months.some(m => m.month === state.selectedMonth)) {
+        state.selectedMonth = months[months.length - 1].month;
+      }
+      const idx = months.findIndex(m => m.month === state.selectedMonth);
+      const cur = months[idx];
+      const prevDisabled = idx <= 0 ? 'disabled' : '';
+      const nextDisabled = idx >= months.length - 1 ? 'disabled' : '';
+      const monthName = fmtMonthLabel(cur.month + '-01');
+      const progressTag = cur.in_progress
+        ? `<span class="month-picker-progress">in progress · ${cur.days_with_data}/${cur.days_in_month}d</span>`
+        : '';
+      pickerHtml = `
+        <div class="month-picker" data-picker="month">
+          <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous month">‹</button>
+          <span class="month-picker-label">${monthName}</span>
+          ${progressTag}
+          <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next month">›</button>
+        </div>
+      `;
     }
-    const idx = months.findIndex(m => m.month === state.selectedMonth);
-    const cur = months[idx];
-    const prevDisabled = idx <= 0 ? 'disabled' : '';
-    const nextDisabled = idx >= months.length - 1 ? 'disabled' : '';
-    const monthName = fmtMonthLabel(cur.month + '-01');
-    const progressTag = cur.in_progress
-      ? `<span class="month-picker-progress">in progress · ${cur.days_with_data}/${cur.days_in_month}d</span>`
-      : '';
-    pickerHtml = `
-      <div class="month-picker">
-        <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous month">‹</button>
-        <span class="month-picker-label">${monthName}</span>
-        ${progressTag}
-        <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next month">›</button>
-      </div>
-    `;
+  } else if (state.view === 'weekly') {
+    const weeks = state.weekly;
+    if (weeks.length > 0) {
+      if (!state.selectedWeek || !weeks.some(w => w.week_starting === state.selectedWeek)) {
+        state.selectedWeek = weeks[weeks.length - 1].week_starting;
+      }
+      const idx = weeks.findIndex(w => w.week_starting === state.selectedWeek);
+      const cur = weeks[idx];
+      const prevDisabled = idx <= 0 ? 'disabled' : '';
+      const nextDisabled = idx >= weeks.length - 1 ? 'disabled' : '';
+      const weekLabel = 'Week of ' + fmtWeekLabel(cur.week_starting);
+      const inProg = isWeekInProgress(cur);
+      const progressTag = inProg
+        ? `<span class="month-picker-progress">in progress · ${weekDaysWithData(cur)}/7d</span>`
+        : '';
+      pickerHtml = `
+        <div class="month-picker" data-picker="week">
+          <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous week">‹</button>
+          <span class="month-picker-label">${weekLabel}</span>
+          ${progressTag}
+          <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next week">›</button>
+        </div>
+      `;
+    }
   }
 
   const toggleHtml = `
@@ -2090,17 +2171,28 @@ function renderSectionControls() {
   hosts.forEach(h => { h.innerHTML = html; });
 }
 
-// Delegated handler for month-picker arrows (rendered into multiple sections)
+// Delegated handler for picker arrows — works for both month and week pickers.
 document.addEventListener('click', (e) => {
   const arrow = e.target.closest('.month-picker-arrow');
   if (!arrow || arrow.disabled) return;
-  const months = aggregateMonthly(state.weekly);
-  const idx = months.findIndex(m => m.month === state.selectedMonth);
-  if (idx < 0) return;
+  const pickerType = arrow.closest('[data-picker]')?.dataset.picker;
   const step = parseInt(arrow.dataset.step, 10);
-  const newIdx = idx + step;
-  if (newIdx < 0 || newIdx >= months.length) return;
-  state.selectedMonth = months[newIdx].month;
+
+  if (pickerType === 'week') {
+    const weeks = state.weekly;
+    const idx = weeks.findIndex(w => w.week_starting === state.selectedWeek);
+    if (idx < 0) return;
+    const newIdx = idx + step;
+    if (newIdx < 0 || newIdx >= weeks.length) return;
+    state.selectedWeek = weeks[newIdx].week_starting;
+  } else {
+    const months = aggregateMonthly(state.weekly);
+    const idx = months.findIndex(m => m.month === state.selectedMonth);
+    if (idx < 0) return;
+    const newIdx = idx + step;
+    if (newIdx < 0 || newIdx >= months.length) return;
+    state.selectedMonth = months[newIdx].month;
+  }
   renderAll();
 });
 
