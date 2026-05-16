@@ -603,6 +603,13 @@
     font-weight: 600;
   }
 
+  /* Cancellation reasons panel — reuses audience-panel + bar-row primitives,
+     so styling stays consistent across the dashboard. The :first-letter bump
+     just helps reason labels read as proper sentences. */
+  #cancellation-reasons-container .audience-panel-body .bar-row-name {
+    max-width: 280px;
+  }
+
   .tier-mix-header {
     display: flex;
     align-items: baseline;
@@ -680,6 +687,13 @@
   .tier-swatch.t1 { background: #9bbde0; }
   .tier-swatch.t2 { background: #4a7bb0; }
   .tier-swatch.t3 { background: #1e3a5f; }
+  .tier-legend-delta {
+    font-size: 11px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin-left: 4px;
+  }
+  .tier-legend-delta.good { color: var(--good); }
+  .tier-legend-delta.bad  { color: var(--bad); }
   .tier-insight {
     background: var(--accent-bg);
     border-left: 3px solid var(--accent);
@@ -1216,6 +1230,7 @@
       <div class="charts" id="money-charts" style="margin-top: 16px"></div>
       <div id="earnings-panel-container" style="margin-top: 16px"></div>
       <div id="tier-mix-container" style="margin-top: 16px"></div>
+      <div id="cancellation-reasons-container" style="margin-top: 16px"></div>
       <div id="growth-history-container" style="margin-top: 16px"></div>
     </section>
   </div>
@@ -1312,10 +1327,42 @@ const CONFIG = {
   AUDIENCE_APPS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=3943724&single=true&output=csv',
   SHEET_EDIT_URL: 'https://docs.google.com/spreadsheets/d/1OMTErHf9rDp7rCfJlEhvc30LZBqQbBheO4yyr7Sr6eM/edit',
 
-  // Lifetime value benchmarks — used in the Patreon value strip and tile context.
-  // Update annually from Patreon CSV export analysis.
-  SUB_LTV: 98,            // mean across 1,198 ever-paid subs
-  SUB_LTV_MEDIAN: 68,     // median (more robust to high-tier outliers)
+  // Lifetime value benchmarks — recalculated from the Patreon Member export.
+  // Sample: 922 ever-paid subscribers as of 16 May 2026.
+  // Mean LTV (£114) = sum of all lifetime amounts ÷ number of ever-paid subs.
+  // Median LTV (£80) = more robust to high-tier outliers (max single sub £658).
+  // Update annually from a fresh member-list export.
+  SUB_LTV: 114,
+  SUB_LTV_MEDIAN: 80,
+  // Final-LTV figures for cancelled cohort — useful for retention conversations.
+  // 149 cancelled paid subs: mean £55, median £32. So new subs need ~7-14 months
+  // to reach average final-LTV territory (avg pledge ~£6.50/mo).
+  SUB_FINAL_LTV_MEAN: 55,
+  SUB_FINAL_LTV_MEDIAN: 32,
+
+  // Cancellation reasons — derived from 281 exit surveys (Nov 2022 → May 2026).
+  // These are reasons cited by cancellers who chose to fill in the exit form;
+  // it's roughly 20-30% of total cancellations. The qualitative breakdown is reliable
+  // even if the absolute volume is partial.
+  // Update by re-downloading the exit-surveys CSV from Patreon Insights.
+  CANCELLATION_REASONS: {
+    total_surveys: 281,
+    period_start: '2022-11',
+    period_end: '2026-05',
+    reasons: [
+      { reason: 'My financial situation changed', count: 188, pct: 66.9 },
+      { reason: 'Some other reason', count: 53, pct: 18.9 },
+      { reason: "The creator wasn't as active as I expected", count: 19, pct: 6.8 },
+      { reason: 'Got the specific benefit I was after', count: 15, pct: 5.3 },
+      { reason: 'Already gave the amount I intended', count: 15, pct: 5.3 },
+      { reason: "Didn't receive the benefits/rewards as described", count: 3, pct: 1.1 },
+      { reason: "Don't want to pay sales tax or VAT", count: 3, pct: 1.1 },
+      { reason: "It was too hard to find or access benefits", count: 2, pct: 0.7 },
+      { reason: "Didn't like the benefits/rewards received", count: 2, pct: 0.7 },
+      { reason: 'I was overcharged', count: 1, pct: 0.4 },
+      { reason: "Not happy with Patreon's features or services", count: 1, pct: 0.4 },
+    ],
+  },
 
   // Lifetime Patreon revenue — total earned since launch (Oct 2022).
   // Pending Patreon Earnings export. Set to null to show "—" until known.
@@ -1653,7 +1700,7 @@ const CONFIG = {
 
 let state = { view: 'monthly', selectedMonth: null, selectedWeek: null, activeTab: 'read',
                weekly: [], campaigns: [],
-               patreonHistory: [], tierMix: [], audienceLocations: [], audienceApps: [] };
+               patreonHistory: [], tierMix: [], tierMixPrev: [], audienceLocations: [], audienceApps: [] };
 // state.view stays 'monthly' — the weekly view was retired. Weekly granularity is
 // still available in the All Data tab, which uses state.weekly directly.
 
@@ -2481,6 +2528,52 @@ function renderEarnings() {
   `;
 }
 
+/* RENDER: CANCELLATION REASONS PANEL
+ * Qualitative breakdown of why subs cancel, from CONFIG.CANCELLATION_REASONS.
+ * Reuses the audience-panel + bar-row primitives so styling stays consistent.
+ * Reads from CONFIG (not a sheet tab) because exit-survey data is updated quarterly
+ * by re-downloading from Patreon Insights — too infrequent to need a sheet tab. */
+function renderCancellationReasons() {
+  const c = document.getElementById('cancellation-reasons-container');
+  if (!c) return;
+  const cr = CONFIG.CANCELLATION_REASONS;
+  if (!cr || !cr.reasons || cr.reasons.length === 0) { c.innerHTML = ''; return; }
+
+  // Convert to the bar-list shape: {name, downloads-equivalent}
+  const items = cr.reasons.map(r => ({
+    name: r.reason,
+    downloads: r.count,  // bar-row primitives use 'downloads' for the count value
+  }));
+
+  // Build the panel using the same markup as audience-shape panels.
+  // Inline-render rather than calling renderAudiencePanel directly so we can
+  // give it its own header and context note.
+  const total = items.reduce((s, it) => s + it.downloads, 0);
+  const topDownloads = items[0].downloads;
+  const visibleCount = Math.min(6, items.length);
+  const visibleItems = items.slice(0, visibleCount);
+  const hiddenItems = items.slice(visibleCount);
+
+  const visibleRows = visibleItems.map(it => buildBarRow(it, total, topDownloads, false)).join('');
+  const hiddenRows = hiddenItems.map(it => buildBarRow(it, total, topDownloads, true)).join('');
+  const expandBtn = hiddenItems.length > 0
+    ? `<button class="audience-panel-expand" data-audience-expand>Show all ${items.length} reasons (currently hiding ${hiddenItems.length})</button>`
+    : '';
+
+  const periodLabel = `${fmtMonthLabel(cr.period_start + '-01')} → ${fmtMonthLabel(cr.period_end + '-01')}`;
+
+  c.innerHTML = `
+    <div class="audience-panel" data-panel-kind="cancellations" style="--section-color: #a64a5e;">
+      <div class="audience-panel-header">
+        <div class="label">Cancellations</div>
+        <h3>Why subscribers leave</h3>
+        <p>Reasons cited in ${cr.total_surveys} exit surveys (${periodLabel}). Each canceller could pick multiple reasons. Subscribers who didn't fill in the exit form are not represented — roughly 20-30% completion rate, so this is the qualitative shape, not the total cancellation count.</p>
+      </div>
+      <div class="audience-panel-body">${visibleRows}${hiddenRows}${expandBtn}</div>
+    </div>
+  `;
+}
+
 /* RENDER: TIER MIX */
 function renderTierMix() {
   const c = document.getElementById('tier-mix-container');
@@ -2503,9 +2596,21 @@ function renderTierMix() {
     return `<div class="tier-segment t${i+1}" style="width:${pct}%" title="${t.tier_name}: £${t.mrr}/mo">${pct > 8 ? Math.round(pct) + '%' : ''}</div>`;
   }).join('');
 
-  const legend = mix.map((t, i) =>
-    `<div class="tier-legend-item"><span class="tier-swatch t${i+1}"></span>${t.tier_name} · ${t.members} subs · £${t.mrr}/mo</div>`
-  ).join('');
+  const legend = mix.map((t, i) => {
+    // Look up the same tier in the previous snapshot for delta arrow
+    let deltaHtml = '';
+    const prevMix = state.tierMixPrev || [];
+    const prevTier = prevMix.find(p => p.tier_name === t.tier_name);
+    if (prevTier && prevTier.members !== null && prevTier.members !== undefined) {
+      const diff = (t.members || 0) - (prevTier.members || 0);
+      if (diff !== 0) {
+        const cls = diff > 0 ? 'good' : 'bad';
+        const sign = diff > 0 ? '▲' : '▼';
+        deltaHtml = ` <span class="tier-legend-delta ${cls}">${sign} ${Math.abs(diff)}</span>`;
+      }
+    }
+    return `<div class="tier-legend-item"><span class="tier-swatch t${i+1}"></span>${t.tier_name} · ${t.members} subs · £${t.mrr}/mo${deltaHtml}</div>`;
+  }).join('');
 
   // Find biggest mismatch — tier with biggest gap between % subs and % MRR
   let insight = '';
@@ -3367,6 +3472,7 @@ function renderAll() {
       renderMoneyCharts();
       renderEarnings();
       renderTierMix();
+      renderCancellationReasons();
       renderGrowthHistory();
       break;
     case 'social':
@@ -3564,11 +3670,13 @@ async function loadData() {
     .filter(r => r.month)
     .sort((a, b) => a.month.localeCompare(b.month)) : [];
 
-  // TierMix tab — preserves history via snapshot_date; the dashboard reads the latest.
+  // TierMix tab — preserves history via snapshot_date; the dashboard reads the latest,
+  // and also stores the previous snapshot (for showing tier-level deltas).
   const tierNumeric = ['tier_price', 'members', 'mrr'];
   const tierRows = tierMixCsv ? rowsToObjects(parseCSV(tierMixCsv), tierNumeric).data
     .filter(r => r.tier_name && r.snapshot_date) : [];
   state.tierMix = pickLatestSnapshot(tierRows);
+  state.tierMixPrev = pickPreviousSnapshot(tierRows);
 
   // AudienceLocations tab — preserves history; pick latest snapshot.
   const locationsRows = locationsCsv ? rowsToObjects(parseCSV(locationsCsv), ['downloads']).data
@@ -3637,6 +3745,16 @@ function pickLatestSnapshot(rows) {
   if (rows.length === 0) return [];
   const latestDate = rows.map(r => r.snapshot_date).sort().slice(-1)[0];
   return rows.filter(r => r.snapshot_date === latestDate);
+}
+
+// Return rows from the second-most-recent snapshot, so we can show period-over-period
+// deltas (e.g. "Lust ↑9" on the tier mix). Returns [] if there's only one snapshot.
+function pickPreviousSnapshot(rows) {
+  if (rows.length === 0) return [];
+  const dates = [...new Set(rows.map(r => r.snapshot_date))].sort();
+  if (dates.length < 2) return [];
+  const prevDate = dates[dates.length - 2];
+  return rows.filter(r => r.snapshot_date === prevDate);
 }
 
 /* PASSWORD GATE
