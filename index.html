@@ -99,19 +99,16 @@
   .monthly-read .hl { background: rgba(184, 92, 0, 0.15); padding: 1px 4px; }
 
   /* VIEW TOGGLE */
-  .view-controls {
-    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-    margin-bottom: 24px;
-  }
   .view-toggle {
     display: inline-flex; border: 1.5px solid var(--ink);
     background: var(--card);
   }
   .view-toggle button {
-    background: transparent; border: none; padding: 9px 20px;
-    font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+    background: transparent; border: none; padding: 6px 14px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--ink);
     cursor: pointer; transition: background 0.15s;
+    line-height: 1.4;
   }
   .view-toggle button + button { border-left: 1.5px solid var(--ink); }
   .view-toggle button.active { background: var(--ink); color: var(--card); }
@@ -141,15 +138,79 @@
     margin-left: 4px;
   }
 
+  /* TAB NAVIGATION */
+  .tab-nav {
+    display: flex; gap: 8px; margin-bottom: 32px;
+    overflow-x: auto;
+    padding: 4px 2px;
+  }
+  .tab-btn {
+    border: none; cursor: pointer;
+    padding: 10px 18px; border-radius: 999px;
+    font-family: var(--body); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .tab-btn:active { transform: scale(0.97); }
+
+  /* Each tab: pastel background + readable dark text from the same colour family.
+     Active state: saturated full-colour background + light text. */
+  .tab-btn[data-tab="read"]    { background: #fbeadb; color: #7a3d00; }
+  .tab-btn[data-tab="read"]:hover:not(.active)    { background: #f4d6ba; }
+  .tab-btn[data-tab="read"].active                { background: #b85c00; color: #fff; }
+
+  .tab-btn[data-tab="listens"] { background: #dceeec; color: #1d524c; }
+  .tab-btn[data-tab="listens"]:hover:not(.active) { background: #c4e0dc; }
+  .tab-btn[data-tab="listens"].active             { background: #2d7a72; color: #fff; }
+
+  .tab-btn[data-tab="patreon"] { background: #e5edda; color: #3d521e; }
+  .tab-btn[data-tab="patreon"]:hover:not(.active) { background: #d4e0bf; }
+  .tab-btn[data-tab="patreon"].active             { background: #5a7a2c; color: #fff; }
+
+  .tab-btn[data-tab="social"]  { background: #f3dde2; color: #702f3e; }
+  .tab-btn[data-tab="social"]:hover:not(.active)  { background: #ebc6cf; }
+  .tab-btn[data-tab="social"].active              { background: #a64a5e; color: #fff; }
+
+  .tab-btn[data-tab="alldata"] { background: #e8e6e1; color: #3e3e38; }
+  .tab-btn[data-tab="alldata"]:hover:not(.active) { background: #d8d6d0; }
+  .tab-btn[data-tab="alldata"].active             { background: #5c5c54; color: #fff; }
+
+  /* TAB PANELS */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  /* Each panel inherits its colour, used by section eyebrow + KPI accents */
+  .tab-panel[data-panel="read"]    { --section-color: #b85c00; }
+  .tab-panel[data-panel="listens"] { --section-color: #2d7a72; }
+  .tab-panel[data-panel="patreon"] { --section-color: #5a7a2c; }
+  .tab-panel[data-panel="social"]  { --section-color: #a64a5e; }
+  .tab-panel[data-panel="alldata"] { --section-color: #5c5c54; }
+
   /* SECTION HEADERS */
   .section { margin-bottom: 44px; }
   .section-header {
     margin-bottom: 16px; padding-bottom: 14px;
     border-bottom: 1px solid var(--rule);
   }
+  /* Flex variant — title block on left, view-toggle + month picker on right */
+  .section-header-flex {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap;
+  }
+  .section-controls {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; flex-shrink: 0;
+    margin-top: 2px;
+  }
+  @media (max-width: 720px) {
+    .section-header-flex { flex-direction: column; align-items: stretch; gap: 12px; }
+  }
   .section-header .label {
     font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--accent); margin-bottom: 4px;
+    text-transform: uppercase;
+    color: var(--section-color, var(--accent));
+    margin-bottom: 4px;
   }
   .section-header h2 {
     font-family: var(--display); font-weight: 600; font-size: 30px;
@@ -686,62 +747,95 @@
     </div>
   </header>
 
-  <div id="monthly-read-container"></div>
+  <nav class="tab-nav" role="tablist">
+    <button class="tab-btn active" data-tab="read" role="tab">Overview</button>
+    <button class="tab-btn" data-tab="listens" role="tab">Listens</button>
+    <button class="tab-btn" data-tab="patreon" role="tab">Patreon</button>
+    <button class="tab-btn" data-tab="social" role="tab">Social</button>
+    <button class="tab-btn" data-tab="alldata" role="tab">All data</button>
+  </nav>
 
-  <div class="view-controls">
-    <div class="view-toggle" role="tablist">
-      <button class="active" data-view="weekly" role="tab">Weekly</button>
-      <button data-view="monthly" role="tab">Monthly</button>
+  <!-- TAB: OVERVIEW -->
+  <div class="tab-panel active" data-panel="read">
+    <div class="section-header section-header-flex">
+      <div>
+        <div class="label">Overview</div>
+        <h2>The headlines</h2>
+      </div>
+      <div class="section-controls" data-controls-host></div>
     </div>
-    <div id="month-picker" class="month-picker" style="display:none"></div>
+    <div class="kpi-grid cols-4" id="read-tldr"></div>
+    <div id="monthly-read-container" style="margin-top: 20px"></div>
   </div>
 
-  <!-- SECTION 1: THE MONEY -->
-  <section class="section">
-    <div class="section-header">
-      <div class="label">Section 01 · The money</div>
-      <h2>Is the maths working?</h2>
-      <p>Patreon revenue, sub growth, and the cost to acquire a new subscriber. The numbers that tell us whether ad spend is paying for itself.</p>
-    </div>
-    <div class="kpi-grid cols-4" id="money-kpis"></div>
-    <div class="charts" id="money-charts" style="margin-top: 16px"></div>
-    <div id="tier-mix-container" style="margin-top: 16px"></div>
-    <div id="growth-history-container" style="margin-top: 16px"></div>
-  </section>
+  <!-- TAB: LISTENS -->
+  <div class="tab-panel" data-panel="listens">
+    <section class="section">
+      <div class="section-header section-header-flex">
+        <div>
+          <div class="label">Listens</div>
+          <h2>Listens</h2>
+          <p>How many people are listening across all platforms — Spotify, Apple, Acast, and anywhere else the show is hosted. The top of the funnel.</p>
+        </div>
+        <div class="section-controls" data-controls-host></div>
+      </div>
+      <div class="kpi-grid cols-3" id="listens-kpis"></div>
+      <div class="charts" id="listens-charts" style="margin-top: 16px"></div>
+    </section>
+  </div>
 
-  <!-- SECTION 2: THE AUDIENCE -->
-  <section class="section">
-    <div class="section-header">
-      <div class="label">Section 02 · The audience</div>
-      <h2>Is the audience growing?</h2>
-      <p>How many people are listening, following, and engaging across platforms. The top of the funnel — listeners today become Patreon subs tomorrow.</p>
-    </div>
-    <div class="kpi-grid cols-3" id="audience-kpis"></div>
-    <div class="charts" id="audience-charts" style="margin-top: 16px"></div>
-  </section>
+  <!-- TAB: PATREON -->
+  <div class="tab-panel" data-panel="patreon">
+    <section class="section">
+      <div class="section-header section-header-flex">
+        <div>
+          <div class="label">Patreon</div>
+          <h2>Patreon</h2>
+          <p>Patreon revenue, sub growth, and the cost to acquire a new subscriber. The bottom line.</p>
+        </div>
+        <div class="section-controls" data-controls-host></div>
+      </div>
+      <div class="kpi-grid cols-4" id="money-kpis"></div>
+      <div class="charts" id="money-charts" style="margin-top: 16px"></div>
+      <div id="tier-mix-container" style="margin-top: 16px"></div>
+      <div id="growth-history-container" style="margin-top: 16px"></div>
+    </section>
+  </div>
 
-  <!-- SECTION 3: WHAT WE RAN -->
-  <section class="section">
-    <div class="section-header">
-      <div class="label">Section 03 · What we ran</div>
-      <h2>What's working?</h2>
-      <p>Every active campaign we've run, what it cost, and what it delivered. Live campaigns are highlighted; ended campaigns stay visible so you can see the back catalogue.</p>
-    </div>
-    <div class="campaigns-card" id="campaigns-card"></div>
-  </section>
+  <!-- TAB: SOCIAL -->
+  <div class="tab-panel" data-panel="social">
+    <section class="section">
+      <div class="section-header section-header-flex">
+        <div>
+          <div class="label">Social</div>
+          <h2>Social</h2>
+          <p>Instagram and Facebook performance, follower growth, and what individual campaigns delivered. The engine driving listens and new Patreon subs.</p>
+        </div>
+        <div class="section-controls" data-controls-host></div>
+      </div>
+      <div class="kpi-grid cols-3" id="audience-kpis"></div>
+      <div class="charts" id="audience-charts" style="margin-top: 16px"></div>
+      <div class="campaigns-card" id="campaigns-card" style="margin-top: 16px"></div>
+    </section>
+  </div>
 
-  <!-- RAW DATA TABLE -->
-  <section class="section">
-    <div class="section-header">
-      <div class="label">Raw data</div>
-      <h2>All the numbers</h2>
-      <p>Every metric, every week. Useful for spotting patterns the sections above don't surface.</p>
-    </div>
-    <div class="table-card">
-      <div class="table-card-header"><h3 id="table-title">Weekly entries</h3></div>
-      <div class="table-scroll"><table class="data-table" id="data-table"></table></div>
-    </div>
-  </section>
+  <!-- TAB: ALL DATA -->
+  <div class="tab-panel" data-panel="alldata">
+    <section class="section">
+      <div class="section-header section-header-flex">
+        <div>
+          <div class="label">All data</div>
+          <h2>Every metric, every period</h2>
+          <p>The full underlying data, reverse-chronological. Useful for spotting patterns the sections above don't surface.</p>
+        </div>
+        <div class="section-controls" data-controls-host></div>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header"><h3 id="table-title">Weekly entries</h3></div>
+        <div class="table-scroll"><table class="data-table" id="data-table"></table></div>
+      </div>
+    </section>
+  </div>
 
   <footer>
     <div>The Wonder Agency <span class="flourish"></span> Hell or High Rollers</div>
@@ -860,7 +954,7 @@ const CONFIG = {
   },
 };
 
-let state = { view: 'weekly', selectedMonth: null, weekly: [], campaigns: [] };
+let state = { view: 'monthly', selectedMonth: null, activeTab: 'read', weekly: [], campaigns: [] };
 
 /* CSV PARSING */
 function parseCSV(text) {
@@ -1081,6 +1175,82 @@ function renderMonthlyRead() {
       ${mr.paragraphs.map(p => `<p>${p}</p>`).join('')}
     </div>
   `;
+}
+
+/* RENDER: READ TAB TL;DR — 4 headline tiles summarising the latest period */
+function renderReadTldr() {
+  const c = document.getElementById('read-tldr');
+  if (!c) return;
+
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  if (data.length === 0) {
+    c.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No data yet</div>';
+    return;
+  }
+
+  // Use selected month in monthly view, latest in weekly view
+  let idx = data.length - 1;
+  if (state.view === 'monthly' && state.selectedMonth) {
+    const i = data.findIndex(d => d.month === state.selectedMonth);
+    if (i >= 0) idx = i;
+  }
+  const cur = data[idx];
+  const visible = data.slice(0, idx + 1);
+
+  // 1. Total listens
+  const listensRes = latestValue(visible, 'monthly_listens');
+  const listensTile = renderKpiTile(
+    'Total listens',
+    listensRes.value !== null ? fmt(listensRes.value, 'number') : '—',
+    null,
+    listensRes.value !== null ? 'Across all platforms' : 'Awaiting podcast host data'
+  );
+
+  // 2. Patreon MRR
+  const mrrRes = latestValue(visible, 'patreon_mrr');
+  let mrrDelta = null;
+  if (mrrRes.index > 0) {
+    const earlier = latestValue(visible.slice(0, mrrRes.index), 'patreon_mrr');
+    if (earlier.value !== null) mrrDelta = fmtDelta(mrrRes.value, earlier.value);
+  }
+  const mrrTile = renderKpiTile(
+    'Patreon MRR',
+    mrrRes.value !== null ? fmt(mrrRes.value, 'currency') : '—',
+    mrrDelta,
+    mrrRes.value !== null ? 'Monthly recurring revenue' : 'Awaiting Patreon snapshot'
+  );
+
+  // 3. Net paid sub growth (new subs - cancellations) for the current period
+  const ns = cur.new_patreon_subs, ca = cur.paid_cancellations;
+  let netSubsTile;
+  if (ns !== null && ca !== null) {
+    const net = ns - ca;
+    const cls = net > 0 ? 'good' : net < 0 ? 'bad' : 'flat';
+    const sign = net > 0 ? '+' : '';
+    netSubsTile = renderKpiTile(
+      'Net paid growth',
+      `${sign}${net}`,
+      null,
+      `<span class="ltv-pill ${cls}">${ns} joined · ${ca} left</span>`
+    );
+  } else {
+    netSubsTile = renderKpiTile('Net paid growth', '—', null, 'Awaiting Patreon data');
+  }
+
+  // 4. Ad spend this period
+  const spend = cur.meta_spend;
+  let spendDelta = null;
+  if (idx > 0 && data[idx - 1].meta_spend !== null && spend !== null) {
+    spendDelta = fmtDelta(spend, data[idx - 1].meta_spend);
+  }
+  const spendTile = renderKpiTile(
+    'Ad spend',
+    spend !== null ? fmt(spend, 'currency') : '—',
+    spendDelta,
+    state.view === 'weekly' ? 'This week' : 'This month'
+  );
+
+  c.innerHTML = [listensTile, mrrTile, netSubsTile, spendTile].join('');
 }
 
 /* RENDER: GROWTH HISTORY — 3+ years of monthly joiners */
@@ -1499,11 +1669,11 @@ function renderCostPerSubTile(cps, cpsDelta) {
   `;
 }
 
-/* RENDER: AUDIENCE KPIs */
-function renderAudienceKpis() {
+/* RENDER: KPI GROUP (shared by Listens + Social sections) */
+function renderKpiGroup(containerId, metrics) {
   const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
   if (data.length === 0) {
-    document.getElementById('audience-kpis').innerHTML =
+    document.getElementById(containerId).innerHTML =
       '<div class="empty-state" style="grid-column:1/-1">No data yet</div>';
     return;
   }
@@ -1540,14 +1710,60 @@ function renderAudienceKpis() {
     return renderKpiTile(label, fmt(cur.value, 'number'), delta, context);
   }
 
-  document.getElementById('audience-kpis').innerHTML = [
-    kpiFor('monthly_listens', 'Monthly listens'),
-    kpiFor('ig_views', 'Instagram views'),
-    kpiFor('fb_views', 'Facebook views'),
-    kpiFor('ig_link_clicks', 'IG link clicks'),
-    kpiFor('fb_link_clicks', 'FB link clicks'),
-    kpiFor('new_ig_follows', 'New IG follows'),
+  document.getElementById(containerId).innerHTML = metrics.map(m => kpiFor(m.key, m.label)).join('');
+}
+
+/* RENDER: LISTENS KPIs */
+function renderListensKpis() {
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  let visible = data;
+  if (state.view === 'monthly' && state.selectedMonth) {
+    const idx = data.findIndex(d => d.month === state.selectedMonth);
+    if (idx >= 0) visible = data.slice(0, idx + 1);
+  }
+
+  const totalListens = latestValue(visible, 'monthly_listens');
+
+  function listensTile(label, value, delta, context) {
+    return renderKpiTile(label, value, delta, context);
+  }
+
+  // Total listens (the one real metric)
+  let totalDelta = null;
+  let totalContext = 'Across all platforms';
+  if (totalListens.value !== null) {
+    const curRow = visible[totalListens.index];
+    const isInProgress = state.view === 'monthly' && curRow && curRow.in_progress;
+    if (isInProgress && curRow.comparable_prev && curRow.comparable_prev.monthly_listens !== undefined) {
+      totalDelta = fmtDelta(totalListens.value, curRow.comparable_prev.monthly_listens);
+      const prevName = fmtMonthLabel(curRow.comparable_prev.month + '-01').split(' ')[0];
+      totalContext = `${curRow.days_with_data} of ${curRow.days_in_month} days · vs ${prevName} same period`;
+    } else if (totalListens.index > 0) {
+      const earlier = latestValue(visible.slice(0, totalListens.index), 'monthly_listens');
+      if (earlier.value !== null) totalDelta = fmtDelta(totalListens.value, earlier.value);
+    }
+  }
+
+  document.getElementById('listens-kpis').innerHTML = [
+    renderKpiTile('Total listens',
+      totalListens.value !== null ? fmt(totalListens.value, 'number') : '—',
+      totalDelta,
+      totalListens.value !== null ? totalContext : 'Awaiting podcast host data'),
+    renderKpiTile('Spotify listens', '—', null, 'Awaiting Spotify for Podcasters'),
+    renderKpiTile('Apple listens', '—', null, 'Awaiting Apple Podcasts Connect'),
   ].join('');
+}
+
+/* RENDER: AUDIENCE / SOCIAL KPIs */
+function renderAudienceKpis() {
+  renderKpiGroup('audience-kpis', [
+    { key: 'ig_views', label: 'Instagram views' },
+    { key: 'fb_views', label: 'Facebook views' },
+    { key: 'new_ig_follows', label: 'New IG follows' },
+    { key: 'ig_link_clicks', label: 'IG link clicks' },
+    { key: 'fb_link_clicks', label: 'FB link clicks' },
+    { key: 'new_fb_follows', label: 'New FB follows' },
+  ]);
 }
 
 /* RENDER: CHART */
@@ -1633,15 +1849,24 @@ function renderMoneyCharts() {
   document.getElementById('money-charts').innerHTML =
     metrics.map(m => renderChart(m, data)).join('');
 }
+function renderListensCharts() {
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  const metrics = [
+    { key: 'monthly_listens', label: 'Monthly listens', format: 'number' },
+  ];
+  document.getElementById('listens-charts').innerHTML =
+    metrics.map(m => renderChart(m, data)).join('');
+}
+
 function renderAudienceCharts() {
   const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
   const metrics = [
-    { key: 'monthly_listens', label: 'Monthly listens',     format: 'number' },
-    { key: 'ig_views',        label: 'Instagram views',     format: 'number' },
-    { key: 'fb_views',        label: 'Facebook views',      format: 'number' },
+    { key: 'ig_views',        label: 'Instagram views',       format: 'number' },
+    { key: 'fb_views',        label: 'Facebook views',        format: 'number' },
+    { key: 'new_ig_follows',  label: 'New IG follows',        format: 'number' },
     { key: 'ig_link_clicks',  label: 'Instagram link clicks', format: 'number' },
     { key: 'fb_link_clicks',  label: 'Facebook link clicks',  format: 'number' },
-    { key: 'new_ig_follows',  label: 'New IG follows',      format: 'number' },
+    { key: 'new_fb_follows',  label: 'New FB follows',        format: 'number' },
   ];
   document.getElementById('audience-charts').innerHTML =
     metrics.map(m => renderChart(m, data)).join('');
@@ -1748,65 +1973,93 @@ function renderTable() {
 }
 
 function renderAll() {
-  renderMonthlyRead();
-  renderMonthPicker();
-  renderMoneyKpis();
-  renderMoneyCharts();
-  renderTierMix();
-  renderGrowthHistory();
-  renderAudienceKpis();
-  renderAudienceCharts();
-  renderCampaigns();
-  renderTable();
+  // Global controls — always render
+  renderSectionControls();
+
+  // Only render the active tab's content
+  switch (state.activeTab) {
+    case 'read':
+      renderReadTldr();
+      renderMonthlyRead();
+      break;
+    case 'listens':
+      renderListensKpis();
+      renderListensCharts();
+      break;
+    case 'patreon':
+      renderMoneyKpis();
+      renderMoneyCharts();
+      renderTierMix();
+      renderGrowthHistory();
+      break;
+    case 'social':
+      renderAudienceKpis();
+      renderAudienceCharts();
+      renderCampaigns();
+      break;
+    case 'alldata':
+      renderTable();
+      break;
+  }
   attachTooltips();
 }
 
 /* RENDER: MONTH PICKER */
-function renderMonthPicker() {
-  const c = document.getElementById('month-picker');
-  if (state.view !== 'monthly') {
-    c.style.display = 'none';
-    return;
-  }
+// Build the section-control bar: Weekly/Monthly toggle + month picker (when monthly).
+// Renders into every <div data-controls-host> on the page; uses event delegation for clicks.
+function renderSectionControls() {
+  const hosts = document.querySelectorAll('[data-controls-host]');
+  if (hosts.length === 0) return;
+
   const months = aggregateMonthly(state.weekly);
-  if (months.length === 0) {
-    c.style.display = 'none';
-    return;
+  let pickerHtml = '';
+  if (state.view === 'monthly' && months.length > 0) {
+    // Default selectedMonth to the latest if not set or no longer in data
+    if (!state.selectedMonth || !months.some(m => m.month === state.selectedMonth)) {
+      state.selectedMonth = months[months.length - 1].month;
+    }
+    const idx = months.findIndex(m => m.month === state.selectedMonth);
+    const cur = months[idx];
+    const prevDisabled = idx <= 0 ? 'disabled' : '';
+    const nextDisabled = idx >= months.length - 1 ? 'disabled' : '';
+    const monthName = fmtMonthLabel(cur.month + '-01');
+    const progressTag = cur.in_progress
+      ? `<span class="month-picker-progress">in progress · ${cur.days_with_data}/${cur.days_in_month}d</span>`
+      : '';
+    pickerHtml = `
+      <div class="month-picker">
+        <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous month">‹</button>
+        <span class="month-picker-label">${monthName}</span>
+        ${progressTag}
+        <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next month">›</button>
+      </div>
+    `;
   }
 
-  // Default selectedMonth to the latest if not set or no longer in data
-  if (!state.selectedMonth || !months.some(m => m.month === state.selectedMonth)) {
-    state.selectedMonth = months[months.length - 1].month;
-  }
-
-  const idx = months.findIndex(m => m.month === state.selectedMonth);
-  const cur = months[idx];
-  const prevDisabled = idx <= 0 ? 'disabled' : '';
-  const nextDisabled = idx >= months.length - 1 ? 'disabled' : '';
-  const monthName = fmtMonthLabel(cur.month + '-01');
-  const progressTag = cur.in_progress
-    ? `<span class="month-picker-progress">in progress · ${cur.days_with_data}/${cur.days_in_month}d</span>`
-    : '';
-
-  c.style.display = 'inline-flex';
-  c.innerHTML = `
-    <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous month">‹</button>
-    <span class="month-picker-label">${monthName}</span>
-    ${progressTag}
-    <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next month">›</button>
+  const toggleHtml = `
+    <div class="view-toggle" role="tablist">
+      <button class="${state.view === 'weekly' ? 'active' : ''}" data-view="weekly" role="tab">Weekly</button>
+      <button class="${state.view === 'monthly' ? 'active' : ''}" data-view="monthly" role="tab">Monthly</button>
+    </div>
   `;
 
-  c.querySelectorAll('.month-picker-arrow').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      const step = parseInt(btn.dataset.step, 10);
-      const newIdx = idx + step;
-      if (newIdx < 0 || newIdx >= months.length) return;
-      state.selectedMonth = months[newIdx].month;
-      renderAll();
-    });
-  });
+  const html = toggleHtml + pickerHtml;
+  hosts.forEach(h => { h.innerHTML = html; });
 }
+
+// Delegated handler for month-picker arrows (rendered into multiple sections)
+document.addEventListener('click', (e) => {
+  const arrow = e.target.closest('.month-picker-arrow');
+  if (!arrow || arrow.disabled) return;
+  const months = aggregateMonthly(state.weekly);
+  const idx = months.findIndex(m => m.month === state.selectedMonth);
+  if (idx < 0) return;
+  const step = parseInt(arrow.dataset.step, 10);
+  const newIdx = idx + step;
+  if (newIdx < 0 || newIdx >= months.length) return;
+  state.selectedMonth = months[newIdx].month;
+  renderAll();
+});
 
 function attachTooltips() {
   const tooltip = document.getElementById('tooltip');
@@ -1823,12 +2076,27 @@ function attachTooltips() {
   });
 }
 
-document.querySelectorAll('.view-toggle button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.view = btn.dataset.view;
+// View-toggle clicks are handled by delegation since toggles are rendered per-section
+document.addEventListener('click', (e) => {
+  const toggleBtn = e.target.closest('.view-toggle button[data-view]');
+  if (toggleBtn) {
+    state.view = toggleBtn.dataset.view;
     renderAll();
+    return;
+  }
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.activeTab = btn.dataset.tab;
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === state.activeTab);
+    });
+    renderAll();
+    // Scroll to top of dashboard area when switching tabs
+    window.scrollTo({ top: document.querySelector('.tab-nav').offsetTop - 20, behavior: 'smooth' });
   });
 });
 
