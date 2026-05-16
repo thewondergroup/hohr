@@ -825,15 +825,100 @@
     .monthly-read { padding: 18px 20px; }
     .monthly-read h2 { font-size: 22px; }
   }
+
+  /* Masthead logo (replaces the old text h1) */
+  .masthead-logo {
+    display: block;
+    height: 56px; width: auto;
+    max-width: 320px;
+  }
+  @media (max-width: 720px) {
+    .masthead-logo { height: 44px; max-width: 240px; }
+  }
+
+  /* Password gate — full-screen overlay shown until the right password is entered */
+  .password-gate {
+    position: fixed; inset: 0;
+    background: var(--ink, #1a1916);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+    padding: 24px;
+  }
+  .password-card {
+    width: 100%; max-width: 380px;
+    background: var(--ink, #1a1916);
+    text-align: center;
+  }
+  .password-logo {
+    width: 240px; max-width: 80%; height: auto;
+    margin: 0 auto 28px auto; display: block;
+  }
+  .password-card-title {
+    font-family: var(--display, Georgia, serif);
+    font-weight: 500; font-size: 22px; color: #fff;
+    margin-bottom: 4px; letter-spacing: -0.01em;
+  }
+  .password-card-sub {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+    text-transform: uppercase; color: rgba(255,255,255,0.5);
+    margin-bottom: 28px;
+  }
+  .password-form { display: flex; flex-direction: column; gap: 10px; }
+  .password-input {
+    width: 100%; box-sizing: border-box;
+    padding: 12px 14px; font-size: 15px;
+    background: rgba(255,255,255,0.08);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    color: #fff;
+    font-family: var(--body, system-ui, sans-serif);
+    outline: none;
+    border-radius: 2px;
+  }
+  .password-input:focus {
+    border-color: var(--accent, #b85c00);
+    background: rgba(255,255,255,0.12);
+  }
+  .password-input::placeholder { color: rgba(255,255,255,0.35); }
+  .password-button {
+    width: 100%; padding: 12px 14px;
+    background: var(--accent, #b85c00);
+    border: none; color: #fff;
+    font-family: var(--body, system-ui, sans-serif);
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 120ms ease;
+  }
+  .password-button:hover { background: #9a4d00; }
+  .password-error {
+    min-height: 18px; font-size: 12px; color: #ff8a7a;
+    margin-top: 4px;
+  }
 </style>
 </head>
 <body>
 
-<div class="wrap">
+<!-- Password gate. Hidden once the correct password is entered for the session. -->
+<div id="password-gate" class="password-gate" role="dialog" aria-modal="true" aria-labelledby="password-gate-title">
+  <div class="password-card">
+    <img src="hohr-logo.png" alt="Hell or High Rollers" class="password-logo">
+    <div class="password-card-title" id="password-gate-title">Performance Dashboard</div>
+    <div class="password-card-sub">Prepared by The Wonder Agency</div>
+    <form id="password-form" class="password-form">
+      <input type="password" id="password-input" class="password-input"
+             placeholder="Enter password" autocomplete="off" autofocus>
+      <button type="submit" class="password-button">Unlock</button>
+      <div class="password-error" id="password-error" aria-live="polite"></div>
+    </form>
+  </div>
+</div>
+
+<div class="wrap" id="dashboard-wrap" style="display: none;">
 
   <header class="masthead">
     <div class="masthead-left">
-      <h1>Hell <span class="amp">or</span> High Rollers</h1>
+      <img src="hohr-logo.png" alt="Hell or High Rollers" class="masthead-logo">
       <div class="sub">Performance dashboard <span class="flourish"></span> Prepared by The Wonder Agency</div>
     </div>
     <div class="masthead-right">
@@ -859,7 +944,7 @@
       </div>
       <div class="section-controls" data-controls-host></div>
     </div>
-    <div class="kpi-grid cols-4" id="read-tldr"></div>
+    <div class="kpi-grid cols-3" id="read-tldr"></div>
     <div id="monthly-read-container" style="margin-top: 20px"></div>
   </div>
 
@@ -989,6 +1074,16 @@ const CONFIG = {
   // Update annually from Patreon CSV export analysis.
   SUB_LTV: 98,            // mean across 1,198 ever-paid subs
   SUB_LTV_MEDIAN: 68,     // median (more robust to high-tier outliers)
+
+  // Lifetime Patreon revenue — total earned since launch (Oct 2022).
+  // Pending Patreon Earnings export. Set to null to show "—" until known.
+  LIFETIME_PATREON_REVENUE: null,
+  LIFETIME_PATREON_REVENUE_AS_OF: null,  // e.g. '2026-05-15'
+
+  // Episode count for "avg listeners per episode" computations.
+  // Pending Acast export. Set to null until known.
+  EPISODES_RELEASED_TOTAL: null,         // cumulative episodes since launch
+  EPISODES_PER_MONTH_AVG: null,          // typical monthly release cadence (used for rolling avg)
 
   // Tier mix — updated quarterly from Patreon snapshot
   TIER_MIX: [
@@ -1490,32 +1585,54 @@ function renderReadTldr() {
     }
   }
 
-  // 4. Ad spend this period
-  const spend = cur.meta_spend;
-  let spendDelta = null;
-  if (!isInProgress && idx > 0 && data[idx - 1].meta_spend !== null && spend !== null) {
-    spendDelta = fmtDelta(spend, data[idx - 1].meta_spend);
-  }
-  // YoY pill for spend — only when this is the monthly view AND prior year has real spend.
-  // We suppress on in-progress months to avoid comparing a partial month against a full one.
-  let spendYoyHtml = '';
-  if (state.view === 'monthly' && !isInProgress && spend !== null) {
-    const prior = priorYearMonth(data, cur.month);
-    if (prior && prior.meta_spend && prior.meta_spend > 0) {
-      const priorLabel = fmtMonthLabel(prior.month + '-01');
-      spendYoyHtml = yoyPill(spend, prior.meta_spend, { priorLabel });
-    }
-  }
-  const spendBaseContext = partialSuffix || (state.view === 'weekly' ? 'This week' : 'This month');
-  const spendContext = spendYoyHtml ? `${spendBaseContext}<br>${spendYoyHtml}` : spendBaseContext;
-  const spendTile = renderKpiTile(
-    'Ad spend',
-    spend !== null ? fmt(spend, 'currency') : '—',
-    spendDelta,
-    spendContext
+  // 4. Average listeners per episode — placeholder until Acast lands.
+  // Plan: use a 30-day-rolling average computed from Acast episode-level data.
+  const avgListensTile = renderKpiTile(
+    'Avg listeners per episode',
+    '—',
+    null,
+    'Awaiting Acast export'
   );
 
-  c.innerHTML = [listensTile, mrrTile, netSubsTile, spendTile].join('');
+  // 5. Cost per new paid sub — meta_spend / new_patreon_subs for this period.
+  // Suppressed on in-progress periods (denominator hasn't settled).
+  // Suppressed if either input is missing.
+  const cpaSpend = cur.meta_spend;
+  const cpaSubs = cur.new_patreon_subs;
+  let cpaTile;
+  if (!isInProgress && cpaSpend !== null && cpaSpend > 0 && cpaSubs !== null && cpaSubs > 0) {
+    const cpa = cpaSpend / cpaSubs;
+    const ltv = CONFIG.SUB_LTV || 98;
+    const ratio = (ltv / cpa).toFixed(1);
+    const cls = (ltv / cpa) >= 3 ? 'good' : (ltv / cpa) >= 1 ? 'flat' : 'bad';
+    cpaTile = renderKpiTile(
+      'Cost per new paid sub',
+      '£' + cpa.toFixed(2),
+      null,
+      `<span class="ltv-pill ${cls}">${ratio}x LTV (£${ltv} avg)</span>`
+    );
+  } else if (isInProgress) {
+    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, partialSuffix);
+  } else {
+    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, 'Awaiting full month data');
+  }
+
+  // 6. Lifetime Patreon revenue — cumulative since launch.
+  // Pending Patreon Earnings export. Shows '—' until CONFIG.LIFETIME_PATREON_REVENUE is set.
+  const lifetimeRev = CONFIG.LIFETIME_PATREON_REVENUE;
+  const lifetimeContext = lifetimeRev !== null
+    ? `Since launch · Oct 2022${CONFIG.LIFETIME_PATREON_REVENUE_AS_OF ? '<br>As of ' + fmtMonthLabel(CONFIG.LIFETIME_PATREON_REVENUE_AS_OF) : ''}`
+    : 'Awaiting Patreon Earnings export';
+  const lifetimeRevTile = renderKpiTile(
+    'Lifetime Patreon revenue',
+    lifetimeRev !== null ? fmt(lifetimeRev, 'currency') : '—',
+    null,
+    lifetimeContext
+  );
+
+  // Layout: Row 1 (audience) — Listens, Avg/ep, MRR.
+  //         Row 2 (monetisation) — Net growth, Cost per sub, Lifetime revenue.
+  c.innerHTML = [listensTile, avgListensTile, mrrTile, netSubsTile, cpaTile, lifetimeRevTile].join('');
 }
 
 /* RENDER: GROWTH HISTORY — 3+ years of monthly joiners */
@@ -2578,7 +2695,89 @@ async function loadData() {
   renderAll();
 }
 
-loadData();
+/* PASSWORD GATE
+ * Client-side only — provides obscurity, not real security. Anyone who views
+ * source and runs the hash function can recover the password. Fine for this
+ * dashboard's threat model (stops casual link-sharing, not motivated attackers).
+ *
+ * To change the password:
+ *   1. Open a terminal and run:  echo -n "your-new-password" | shasum -a 256
+ *   2. Paste the hash into PASSWORD_SHA256 below.
+ *   3. Commit and push. Anyone with the old password will need the new one on
+ *      their next session.
+ *
+ * Current password: HOHR123!!
+ */
+const PASSWORD_SHA256 = '10efbf5380573087a30dfade1caa948d7486e8ae0a49a1dd027e1097fa90ec17';
+const PASSWORD_SESSION_KEY = 'hohr_dashboard_unlocked_v1';
+
+async function sha256Hex(text) {
+  const buf = new TextEncoder().encode(text);
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hashBuf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function revealDashboard() {
+  const gate = document.getElementById('password-gate');
+  const wrap = document.getElementById('dashboard-wrap');
+  if (gate) gate.style.display = 'none';
+  if (wrap) wrap.style.display = '';
+  // Start the data load only after the gate is cleared.
+  if (!window._hohrLoadStarted) {
+    window._hohrLoadStarted = true;
+    loadData();
+  }
+}
+
+function showPasswordError(msg) {
+  const err = document.getElementById('password-error');
+  const input = document.getElementById('password-input');
+  if (err) err.textContent = msg;
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+}
+
+(function initPasswordGate() {
+  // Already authenticated this session? Reveal immediately.
+  try {
+    if (sessionStorage.getItem(PASSWORD_SESSION_KEY) === '1') {
+      revealDashboard();
+      return;
+    }
+  } catch (e) { /* sessionStorage may be blocked — fall through to gate */ }
+
+  const form = document.getElementById('password-form');
+  if (!form) {
+    // Defensive fallback — if the modal markup is missing, don't lock people out forever.
+    revealDashboard();
+    return;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('password-input');
+    const entered = (input && input.value) || '';
+    if (!entered) {
+      showPasswordError('Please enter the password.');
+      return;
+    }
+    try {
+      const hash = await sha256Hex(entered);
+      if (hash === PASSWORD_SHA256) {
+        try { sessionStorage.setItem(PASSWORD_SESSION_KEY, '1'); } catch (e) {}
+        revealDashboard();
+      } else {
+        showPasswordError('Incorrect password.');
+      }
+    } catch (e) {
+      showPasswordError('Something went wrong. Try again.');
+    }
+  });
+})();
 </script>
 
 </body>
