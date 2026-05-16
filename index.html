@@ -1219,6 +1219,11 @@
 const CONFIG = {
   WEEKLY_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=0&single=true&output=csv',
   CAMPAIGNS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=1314946819&single=true&output=csv',
+  // New tabs (May 2026). If empty/null, the dashboard falls back to the hardcoded CONFIG arrays.
+  PATREON_HISTORY_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=1089277210&single=true&output=csv',
+  TIER_MIX_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=1009194445&single=true&output=csv',
+  AUDIENCE_LOCATIONS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=1371535406&single=true&output=csv',
+  AUDIENCE_APPS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=3943724&single=true&output=csv',
   SHEET_EDIT_URL: 'https://docs.google.com/spreadsheets/d/1OMTErHf9rDp7rCfJlEhvc30LZBqQbBheO4yyr7Sr6eM/edit',
 
   // Lifetime value benchmarks — used in the Patreon value strip and tile context.
@@ -1560,7 +1565,9 @@ const CONFIG = {
   },
 };
 
-let state = { view: 'monthly', selectedMonth: null, selectedWeek: null, activeTab: 'read', weekly: [], campaigns: [] };
+let state = { view: 'monthly', selectedMonth: null, selectedWeek: null, activeTab: 'read',
+               weekly: [], campaigns: [],
+               patreonHistory: [], tierMix: [], audienceLocations: [], audienceApps: [] };
 // state.view stays 'monthly' — the weekly view was retired. Weekly granularity is
 // still available in the All Data tab, which uses state.weekly directly.
 
@@ -2040,7 +2047,16 @@ function renderReadTldr() {
 /* RENDER: GROWTH HISTORY — 3+ years of monthly joiners */
 function renderGrowthHistory() {
   const c = document.getElementById('growth-history-container');
-  const data = CONFIG.MONTHLY_JOINERS;
+  // Convert state.patreonHistory (which has new_paid_joiners, new_free_joiners) to the
+  // shape this function was built for (paid, total). total = paid + free.
+  // Filter out rows missing the joiner data (we don't want empty bars).
+  const data = (state.patreonHistory || [])
+    .filter(r => r.new_paid_joiners !== null && r.new_paid_joiners !== undefined)
+    .map(r => ({
+      month: r.month,
+      paid: r.new_paid_joiners || 0,
+      total: (r.new_paid_joiners || 0) + (r.new_free_joiners || 0),
+    }));
   if (!data || data.length === 0) { c.innerHTML = ''; return; }
 
   const totalPaid = data.reduce((a, d) => a + d.paid, 0);
@@ -2227,33 +2243,36 @@ function renderGrowthHistory() {
 /* RENDER: TIER MIX */
 function renderTierMix() {
   const c = document.getElementById('tier-mix-container');
-  const mix = CONFIG.TIER_MIX;
+  // state.tierMix has fields {tier_name, tier_price, members, mrr} from the TierMix sheet tab.
+  // Sort by price ascending so the bars render in a meaningful order.
+  const mix = (state.tierMix || []).slice().sort((a, b) => (a.tier_price || 0) - (b.tier_price || 0));
   if (!mix || mix.length === 0) { c.innerHTML = ''; return; }
 
-  const totalSubs = mix.reduce((a, t) => a + t.subs, 0);
-  const totalMRR = mix.reduce((a, t) => a + t.mrr, 0);
+  const totalSubs = mix.reduce((a, t) => a + (t.members || 0), 0);
+  const totalMRR = mix.reduce((a, t) => a + (t.mrr || 0), 0);
+  if (totalSubs === 0 || totalMRR === 0) { c.innerHTML = ''; return; }
 
   const subsBar = mix.map((t, i) => {
-    const pct = (t.subs / totalSubs) * 100;
-    return `<div class="tier-segment t${i+1}" style="width:${pct}%" title="${t.name}: ${t.subs} subs">${pct > 8 ? Math.round(pct) + '%' : ''}</div>`;
+    const pct = ((t.members || 0) / totalSubs) * 100;
+    return `<div class="tier-segment t${i+1}" style="width:${pct}%" title="${t.tier_name}: ${t.members} subs">${pct > 8 ? Math.round(pct) + '%' : ''}</div>`;
   }).join('');
 
   const mrrBar = mix.map((t, i) => {
-    const pct = (t.mrr / totalMRR) * 100;
-    return `<div class="tier-segment t${i+1}" style="width:${pct}%" title="${t.name}: £${t.mrr}/mo">${pct > 8 ? Math.round(pct) + '%' : ''}</div>`;
+    const pct = ((t.mrr || 0) / totalMRR) * 100;
+    return `<div class="tier-segment t${i+1}" style="width:${pct}%" title="${t.tier_name}: £${t.mrr}/mo">${pct > 8 ? Math.round(pct) + '%' : ''}</div>`;
   }).join('');
 
   const legend = mix.map((t, i) =>
-    `<div class="tier-legend-item"><span class="tier-swatch t${i+1}"></span>${t.name} · ${t.subs} subs · £${t.mrr}/mo</div>`
+    `<div class="tier-legend-item"><span class="tier-swatch t${i+1}"></span>${t.tier_name} · ${t.members} subs · £${t.mrr}/mo</div>`
   ).join('');
 
   // Find biggest mismatch — tier with biggest gap between % subs and % MRR
   let insight = '';
   const top = mix.map(t => ({
-    name: t.name,
-    pctSubs: (t.subs / totalSubs) * 100,
-    pctMRR: (t.mrr / totalMRR) * 100,
-    gap: ((t.mrr / totalMRR) - (t.subs / totalSubs)) * 100,
+    name: t.tier_name,
+    pctSubs: ((t.members || 0) / totalSubs) * 100,
+    pctMRR: ((t.mrr || 0) / totalMRR) * 100,
+    gap: (((t.mrr || 0) / totalMRR) - ((t.members || 0) / totalSubs)) * 100,
   })).sort((a, b) => b.gap - a.gap);
   if (top[0].gap > 5) {
     insight = `<strong>${top[0].name}</strong> punches above its weight — only ${Math.round(top[0].pctSubs)}% of subs but ${Math.round(top[0].pctMRR)}% of revenue. Worth thinking about whether other subs could upgrade.`;
@@ -2623,16 +2642,24 @@ function renderListensKpis() {
 }
 
 /* RENDER: AUDIENCE SHAPE — Locations + Apps panels on the Listens tab.
-   Both are bar-list views of CONFIG.LISTENER_COUNTRIES and CONFIG.LISTENER_APPS,
-   sorted descending by downloads. Bar widths scaled relative to the top item
-   for legibility (otherwise the UK's 59% swamps every other bar).
-   Percentages shown are share of total, not relative width. */
+   Reads from state.audienceLocations and state.audienceApps, which are
+   populated from the AudienceLocations and AudienceApps Sheet tabs
+   (with fallback to CONFIG arrays if those tabs aren't reachable).
+   Bar widths scaled relative to the top item for legibility (otherwise
+   the UK's 59% swamps every other bar). */
 function renderAudienceShape() {
-  renderAudiencePanel('locations-body', CONFIG.LISTENER_COUNTRIES, {
+  // Adapt field names to the bar-list renderer's expected shape (name + downloads).
+  const locations = (state.audienceLocations || []).map(r => ({
+    name: r.country, downloads: r.downloads
+  }));
+  const apps = (state.audienceApps || []).map(r => ({
+    name: r.app, downloads: r.downloads
+  }));
+  renderAudiencePanel('locations-body', locations, {
     visible: 5,
     rollupLabel: 'Rest of the world',
   });
-  renderAudiencePanel('apps-body', CONFIG.LISTENER_APPS, {
+  renderAudiencePanel('apps-body', apps, {
     visible: 10,
     rollupLabel: 'Long tail (other apps)',
   });
@@ -3190,24 +3217,35 @@ async function fetchCSV(url) {
   return res.text();
 }
 
+// Fetch a single URL with a friendly source name; returns text or '' on failure.
+// Collects errors in `errors` array so we can warn the user once at the end.
+async function fetchSource(url, name, errors) {
+  if (!url) {
+    errors.push(`${name}: not configured`);
+    return '';
+  }
+  try {
+    return await fetchCSV(url);
+  } catch (e) {
+    errors.push(`${name}: ${e.message}`);
+    return '';
+  }
+}
+
 async function loadData() {
-  let weeklyCsv = '', campaignsCsv = '';
   const errors = [];
 
-  if (CONFIG.WEEKLY_CSV_URL) {
-    try { weeklyCsv = await fetchCSV(CONFIG.WEEKLY_CSV_URL); }
-    catch (e) { errors.push('Weekly tab: ' + e.message); }
-  } else {
-    errors.push('Weekly tab: CONFIG.WEEKLY_CSV_URL is not set');
-  }
+  // Fetch all 6 sources in parallel — much faster than sequential.
+  const [weeklyCsv, campaignsCsv, patreonCsv, tierMixCsv, locationsCsv, appsCsv] = await Promise.all([
+    fetchSource(CONFIG.WEEKLY_CSV_URL, 'Weekly tab', errors),
+    fetchSource(CONFIG.CAMPAIGNS_CSV_URL, 'Campaigns tab', errors),
+    fetchSource(CONFIG.PATREON_HISTORY_CSV_URL, 'PatreonHistory tab', errors),
+    fetchSource(CONFIG.TIER_MIX_CSV_URL, 'TierMix tab', errors),
+    fetchSource(CONFIG.AUDIENCE_LOCATIONS_CSV_URL, 'AudienceLocations tab', errors),
+    fetchSource(CONFIG.AUDIENCE_APPS_CSV_URL, 'AudienceApps tab', errors),
+  ]);
 
-  if (CONFIG.CAMPAIGNS_CSV_URL) {
-    try { campaignsCsv = await fetchCSV(CONFIG.CAMPAIGNS_CSV_URL); }
-    catch (e) { errors.push('Campaigns tab: ' + e.message); }
-  } else {
-    errors.push('Campaigns tab: CONFIG.CAMPAIGNS_CSV_URL is not set');
-  }
-
+  // Weekly tab — timeseries data
   const weeklyNumeric = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations',
     'monthly_listens', 'patreon_total_subs', 'patreon_mrr',
     'ig_followers', 'fb_followers', 'tiktok_followers',
@@ -3218,15 +3256,75 @@ async function loadData() {
     .filter(r => r.week_starting)
     .sort((a, b) => a.week_starting.localeCompare(b.week_starting)) : [];
 
+  // Campaigns tab
   const campaignNumeric = ['spend', 'primary_result'];
   state.campaigns = campaignsCsv ? rowsToObjects(parseCSV(campaignsCsv), campaignNumeric).data
     .filter(r => r.name) : [];
 
+  // PatreonHistory tab — monthly Patreon membership + earnings.
+  // Empty-string cells become null. Sorted chronologically.
+  const patreonNumeric = ['new_paid_joiners', 'new_free_joiners', 'paid_cancellations',
+    'total_paid_subs_end', 'total_free_subs_end', 'mrr_end',
+    'gross_earnings', 'net_earnings'];
+  state.patreonHistory = patreonCsv ? rowsToObjects(parseCSV(patreonCsv), patreonNumeric).data
+    .filter(r => r.month)
+    .sort((a, b) => a.month.localeCompare(b.month)) : [];
+
+  // TierMix tab — preserves history via snapshot_date; the dashboard reads the latest.
+  const tierNumeric = ['tier_price', 'members', 'mrr'];
+  const tierRows = tierMixCsv ? rowsToObjects(parseCSV(tierMixCsv), tierNumeric).data
+    .filter(r => r.tier_name && r.snapshot_date) : [];
+  state.tierMix = pickLatestSnapshot(tierRows);
+
+  // AudienceLocations tab — preserves history; pick latest snapshot.
+  const locationsRows = locationsCsv ? rowsToObjects(parseCSV(locationsCsv), ['downloads']).data
+    .filter(r => r.country && r.snapshot_date) : [];
+  state.audienceLocations = pickLatestSnapshot(locationsRows)
+    .filter(r => r.downloads !== null && r.downloads > 0)
+    .sort((a, b) => b.downloads - a.downloads);
+
+  // AudienceApps tab — same pattern as locations.
+  const appsRows = appsCsv ? rowsToObjects(parseCSV(appsCsv), ['downloads']).data
+    .filter(r => r.app && r.snapshot_date) : [];
+  state.audienceApps = pickLatestSnapshot(appsRows)
+    .filter(r => r.downloads !== null && r.downloads > 0)
+    .sort((a, b) => b.downloads - a.downloads);
+
+  // If a sheet didn't load, fall back to the hardcoded CONFIG arrays where possible.
+  // This keeps the dashboard working during the migration and on flaky networks.
+  if (state.audienceLocations.length === 0 && CONFIG.LISTENER_COUNTRIES) {
+    state.audienceLocations = CONFIG.LISTENER_COUNTRIES.map(c => ({
+      country: c.name, downloads: c.downloads
+    }));
+  }
+  if (state.audienceApps.length === 0 && CONFIG.LISTENER_APPS) {
+    state.audienceApps = CONFIG.LISTENER_APPS.map(a => ({
+      app: a.name, downloads: a.downloads
+    }));
+  }
+  if (state.tierMix.length === 0 && CONFIG.TIER_MIX) {
+    state.tierMix = CONFIG.TIER_MIX.map(t => ({
+      tier_name: t.name, tier_price: t.price, members: t.subs, mrr: t.mrr
+    }));
+  }
+  if (state.patreonHistory.length === 0 && CONFIG.MONTHLY_JOINERS) {
+    state.patreonHistory = CONFIG.MONTHLY_JOINERS.map(m => ({
+      month: m.month,
+      new_paid_joiners: m.paid,
+      new_free_joiners: m.total - m.paid,
+    }));
+  }
+
   if (errors.length > 0) {
     console.warn('Dashboard data load issues:', errors.join('; '));
-    document.querySelector('.wrap').insertAdjacentHTML('afterbegin', `
-      <div class="error">Some data didn't load this time. Refresh in a moment, or check the Google Sheet is still published.</div>
-    `);
+    // Only show user-facing error if Weekly or Campaigns failed (the core data).
+    // Failed snapshot tabs fall back to CONFIG silently.
+    const coreFailed = errors.some(e => e.startsWith('Weekly tab') || e.startsWith('Campaigns tab'));
+    if (coreFailed) {
+      document.querySelector('.wrap').insertAdjacentHTML('afterbegin', `
+        <div class="error">Some data didn't load this time. Refresh in a moment, or check the Google Sheet is still published.</div>
+      `);
+    }
   }
   if (state.weekly.length > 0) {
     document.getElementById('last-updated').textContent =
@@ -3236,6 +3334,15 @@ async function loadData() {
     document.getElementById('sheet-link').href = CONFIG.SHEET_EDIT_URL;
   }
   renderAll();
+}
+
+// For tabs that preserve history via a `snapshot_date` column, return only the
+// rows whose snapshot_date equals the most recent date in the dataset.
+// This lets the team append new snapshots over time without breaking the dashboard.
+function pickLatestSnapshot(rows) {
+  if (rows.length === 0) return [];
+  const latestDate = rows.map(r => r.snapshot_date).sort().slice(-1)[0];
+  return rows.filter(r => r.snapshot_date === latestDate);
 }
 
 /* PASSWORD GATE
