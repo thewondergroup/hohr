@@ -967,9 +967,9 @@ const CONFIG = {
       period: 'March 2026',
       title: "The campaign finds its rhythm",
       paragraphs: [
-        'First full month of agency-led campaign activity. Meta spend was <span class="hl">£1,018 across March</span>, holding to a steady ~£230 a week. Instagram views grew from 55k in early March to 117k by end of month — the early audience funnel was clearly responding.',
+        'Meta spend was <span class="hl">£1,018 across March</span>, holding to a steady ~£230 a week. Instagram views grew from 55k in early March to 117k by end of month — the audience funnel was clearly responding.',
         'The pivotal moment was the launch of the <span class="hl">Season 2 Henley Reel ad set on 27 March</span>. Weekly link clicks immediately tripled — from ~1,200/week through early March to 4,522 in the final week — while ad spend stayed flat at £231. The creative was unlocking acquisition that had been left on the table.',
-        'Patreon snapshot at March 23 showed <span class="hl">781 paid subs and £4,770 monthly earnings</span>, on track ahead of the April reporting cycle. The agency takeover (Feb 24) was beginning to show in the numbers, with the Henley Reel set up to carry the campaign into April.'
+        'Patreon snapshot at March 23 showed <span class="hl">781 paid subs and £4,770 monthly earnings</span>, on track ahead of the April reporting cycle. With the Henley Reel performing strongly, the campaign was set up to carry that momentum into April.'
       ]
     }
   },
@@ -1209,7 +1209,7 @@ function renderMonthlyRead() {
       <div class="monthly-read">
         <div class="monthly-read-meta">${monthName} · The read</div>
         <h2 style="color: var(--muted)">No read written for this month</h2>
-        <p style="color: var(--muted); margin-top: 6px">The editorial summary covers months where the agency has been live (March 2026 onward). Use the month picker to navigate.</p>
+        <p style="color: var(--muted); margin-top: 6px">The editorial summary covers March 2026 onward. Use the month picker to navigate.</p>
       </div>
     `;
     return;
@@ -1285,17 +1285,22 @@ function renderReadTldr() {
     netSubsTile = renderKpiTile('Net paid growth', '—', null, 'Awaiting Patreon data');
   }
 
+  const isInProgress = state.view === 'monthly' && cur.in_progress;
+  const partialSuffix = isInProgress
+    ? `${cur.days_with_data} of ${cur.days_in_month} days · in progress`
+    : null;
+
   // 4. Ad spend this period
   const spend = cur.meta_spend;
   let spendDelta = null;
-  if (idx > 0 && data[idx - 1].meta_spend !== null && spend !== null) {
+  if (!isInProgress && idx > 0 && data[idx - 1].meta_spend !== null && spend !== null) {
     spendDelta = fmtDelta(spend, data[idx - 1].meta_spend);
   }
   const spendTile = renderKpiTile(
     'Ad spend',
     spend !== null ? fmt(spend, 'currency') : '—',
     spendDelta,
-    state.view === 'weekly' ? 'This week' : 'This month'
+    partialSuffix || (state.view === 'weekly' ? 'This week' : 'This month')
   );
 
   c.innerHTML = [listensTile, mrrTile, netSubsTile, spendTile].join('');
@@ -1580,17 +1585,19 @@ function renderMoneyKpis() {
   const prev = latestIdx > 0 ? data[latestIdx - 1] : null;
   const periodLabel = state.view === 'weekly' ? 'this week' : 'this month';
   const isInProgress = state.view === 'monthly' && latest.in_progress;
-  const cmpPrev = isInProgress ? latest.comparable_prev : null;
-  const prevMonthName = cmpPrev ? fmtMonthLabel(cmpPrev.month + '-01').split(' ')[0] : null;
+  // When the displayed month is partial, suppress all flow-metric deltas — comparing
+  // a partial period to a complete one (or even a same-period slice) tends to read
+  // as alarming red even when nothing's wrong. Wait for the month to complete.
   const periodSuffix = isInProgress
-    ? `${latest.days_with_data} of ${latest.days_in_month} days · vs ${prevMonthName} same period`
+    ? `${latest.days_with_data} of ${latest.days_in_month} days · in progress`
     : null;
 
-  // Stock metrics: walk back to last non-null value UP TO and including the selected period
+  // Stock metrics: walk back to last non-null value UP TO and including the selected period.
+  // Stock-metric deltas (MRR, total subs) ARE fair to show because they're point-in-time
+  // snapshots, not period accumulations.
   const sliced = data.slice(0, latestIdx + 1);
   const mrrRes = latestValue(sliced, 'patreon_mrr');
   const mrr = mrrRes.value;
-  // For delta, find the value BEFORE the last-known one
   let mrrDelta = null;
   if (mrrRes.index > 0) {
     const earlier = latestValue(sliced.slice(0, mrrRes.index), 'patreon_mrr');
@@ -1599,41 +1606,31 @@ function renderMoneyKpis() {
 
   const totalSubsRes = latestValue(sliced, 'patreon_total_subs');
 
-  // Flow metrics: this period's value only (don't carry over)
+  // Flow metrics: this period's value only (don't carry over).
+  // Deltas only shown when the month is complete.
   const newSubs = latest.new_patreon_subs;
   let newSubsDelta = null;
-  if (newSubs !== null) {
-    if (cmpPrev && cmpPrev.new_patreon_subs !== undefined) {
-      newSubsDelta = fmtDelta(newSubs, cmpPrev.new_patreon_subs);
-    } else if (prev && prev.new_patreon_subs !== null) {
-      newSubsDelta = fmtDelta(newSubs, prev.new_patreon_subs);
-    }
+  if (!isInProgress && newSubs !== null && prev && prev.new_patreon_subs !== null) {
+    newSubsDelta = fmtDelta(newSubs, prev.new_patreon_subs);
   }
 
   const cancels = latest.paid_cancellations;
   let cancelsDelta = null;
-  if (cancels !== null) {
-    let prevCancels = null;
-    if (cmpPrev && cmpPrev.paid_cancellations !== undefined) prevCancels = cmpPrev.paid_cancellations;
-    else if (prev && prev.paid_cancellations !== null) prevCancels = prev.paid_cancellations;
-    if (prevCancels !== null) {
-      const raw = fmtDelta(cancels, prevCancels);
-      cancelsDelta = {
-        text: raw.text,
-        cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
-      };
-    }
+  if (!isInProgress && cancels !== null && prev && prev.paid_cancellations !== null) {
+    const raw = fmtDelta(cancels, prev.paid_cancellations);
+    cancelsDelta = {
+      text: raw.text,
+      cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
+    };
   }
 
   // Net growth only valid when both numbers exist
   const netGrowth = (newSubs !== null && cancels !== null) ? newSubs - cancels : null;
 
   const cps = costPerNewSub(latest);
-  const cpsPrev = cmpPrev
-    ? costPerNewSub(cmpPrev)
-    : prev ? costPerNewSub(prev) : null;
+  const cpsPrev = prev ? costPerNewSub(prev) : null;
   let cpsDelta = null;
-  if (cps !== null && cpsPrev !== null) {
+  if (!isInProgress && cps !== null && cpsPrev !== null) {
     const raw = fmtDelta(cps, cpsPrev);
     cpsDelta = {
       text: raw.text,
@@ -1734,7 +1731,9 @@ function renderKpiGroup(containerId, metrics) {
   }
 
   // Each metric: latest known value + delta vs previous known value.
-  // In monthly view, use comparable_prev for in-progress months (same-day comparison).
+  // For in-progress months we suppress the delta — comparing partial-period numbers
+  // against complete-period numbers tends to read alarmingly red even when nothing's wrong.
+  // The "X of Y days · in progress" subtitle provides the context.
   function kpiFor(key, label) {
     const cur = latestValue(visible, key);
     if (cur.value === null) {
@@ -1746,11 +1745,9 @@ function renderKpiGroup(containerId, metrics) {
     const curRow = visible[cur.index];
     const isInProgress = state.view === 'monthly' && curRow && curRow.in_progress;
 
-    if (isInProgress && curRow.comparable_prev && curRow.comparable_prev[key] !== undefined) {
-      // Same-day-count comparison
-      delta = fmtDelta(cur.value, curRow.comparable_prev[key]);
-      const prevName = fmtMonthLabel(curRow.comparable_prev.month + '-01').split(' ')[0];
-      context = `${curRow.days_with_data} of ${curRow.days_in_month} days · vs ${prevName} same period`;
+    if (isInProgress) {
+      context = `${curRow.days_with_data} of ${curRow.days_in_month} days · in progress`;
+      // Intentionally no delta: wait for the month to complete.
     } else if (cur.index > 0) {
       const earlier = latestValue(visible.slice(0, cur.index), key);
       if (earlier.value !== null) delta = fmtDelta(cur.value, earlier.value);
@@ -1776,16 +1773,15 @@ function renderListensKpis() {
     return renderKpiTile(label, value, delta, context);
   }
 
-  // Total listens (the one real metric)
+  // Total listens (the one real metric).
+  // Suppress delta on in-progress months — partial-vs-full comparisons mislead.
   let totalDelta = null;
   let totalContext = 'Across all platforms';
   if (totalListens.value !== null) {
     const curRow = visible[totalListens.index];
     const isInProgress = state.view === 'monthly' && curRow && curRow.in_progress;
-    if (isInProgress && curRow.comparable_prev && curRow.comparable_prev.monthly_listens !== undefined) {
-      totalDelta = fmtDelta(totalListens.value, curRow.comparable_prev.monthly_listens);
-      const prevName = fmtMonthLabel(curRow.comparable_prev.month + '-01').split(' ')[0];
-      totalContext = `${curRow.days_with_data} of ${curRow.days_in_month} days · vs ${prevName} same period`;
+    if (isInProgress) {
+      totalContext = `${curRow.days_with_data} of ${curRow.days_in_month} days · in progress`;
     } else if (totalListens.index > 0) {
       const earlier = latestValue(visible.slice(0, totalListens.index), 'monthly_listens');
       if (earlier.value !== null) totalDelta = fmtDelta(totalListens.value, earlier.value);
