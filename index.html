@@ -184,6 +184,13 @@
   .subsection-header {
     margin-bottom: 16px;
   }
+  .subsection-header-flex {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap;
+  }
+  @media (max-width: 720px) {
+    .subsection-header-flex { flex-direction: column; align-items: stretch; gap: 12px; }
+  }
   .subsection-header .label {
     font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--section-color, var(--accent));
@@ -906,10 +913,13 @@
       <div class="charts" id="audience-charts" style="margin-top: 16px"></div>
 
       <div class="subsection-divider">
-        <div class="subsection-header">
-          <div class="label">Paid Meta</div>
-          <h3>Paid acquisition</h3>
-          <p>Ad spend, link clicks, and cost per click for the selected month. Year-on-year comparison shown where prior-year data exists.</p>
+        <div class="subsection-header subsection-header-flex">
+          <div>
+            <div class="label">Paid Meta</div>
+            <h3>Paid acquisition</h3>
+            <p>Ad spend, link clicks, and cost per click for the selected month. Year-on-year comparison shown where prior-year data exists.</p>
+          </div>
+          <div class="section-controls" data-controls-host></div>
         </div>
         <div class="kpi-grid cols-3" id="paid-meta-kpis"></div>
         <div class="charts" id="paid-meta-charts" style="margin-top: 16px"></div>
