@@ -121,6 +121,81 @@
     text-transform: uppercase; color: var(--accent);
     margin-left: 4px;
   }
+  .month-picker-label-btn {
+    background: transparent; border: none; cursor: pointer;
+    padding: 0 12px; font-weight: 600; font-size: 13px;
+    color: var(--ink); min-width: 110px; text-align: center;
+    font-variant-numeric: tabular-nums; font-family: var(--body);
+  }
+  .month-picker-label-btn:hover { background: var(--paper-2); }
+  .month-picker-label-btn::after {
+    content: '▾'; margin-left: 6px; font-size: 10px; opacity: 0.5;
+  }
+  .month-picker-wrap { position: relative; display: inline-block; }
+  .month-picker-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 50%;
+    transform: translateX(-50%);
+    background: var(--card); border: 1.5px solid var(--rule);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    z-index: 100; max-height: 280px; overflow-y: auto;
+    min-width: 160px; display: none;
+  }
+  .month-picker-dropdown.open { display: block; }
+  .month-picker-option {
+    display: block; width: 100%; text-align: left;
+    padding: 8px 14px; border: none; background: transparent;
+    font-size: 13px; font-family: var(--body); color: var(--ink);
+    cursor: pointer; font-variant-numeric: tabular-nums;
+  }
+  .month-picker-option:hover { background: var(--paper-2); }
+  .month-picker-option.current { background: var(--paper-2); font-weight: 600; }
+  .month-picker-option.has-data { color: var(--ink); }
+  .month-picker-option.no-data { color: var(--muted-2); }
+
+  /* YoY pill - appears under the standard MoM delta on tiles that have it */
+  .yoy-pill {
+    display: inline-block; margin-top: 4px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.03em;
+    padding: 2px 7px; border-radius: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .yoy-pill.up   { color: var(--good); background: var(--good-bg); }
+  .yoy-pill.down { color: var(--bad);  background: var(--bad-bg);  }
+  .yoy-pill.flat { color: var(--muted); background: var(--paper-2); }
+
+  /* YoY note inside the monthly read */
+  .yoy-note {
+    margin-top: 14px; padding: 12px 14px;
+    background: var(--paper-2); border-left: 3px solid var(--section-color, var(--accent));
+    font-size: 13px; line-height: 1.55; color: var(--muted);
+    font-family: var(--body);
+  }
+  .yoy-note .yoy-note-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--section-color, var(--accent));
+    display: block; margin-bottom: 4px;
+  }
+
+  /* Paid Meta sub-section (within Social tab) */
+  .subsection-divider {
+    margin-top: 32px; padding-top: 24px;
+    border-top: 1px solid var(--rule);
+  }
+  .subsection-header {
+    margin-bottom: 16px;
+  }
+  .subsection-header .label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--section-color, var(--accent));
+    margin-bottom: 4px;
+  }
+  .subsection-header h3 {
+    font-family: var(--display); font-weight: 500;
+    font-size: 22px; letter-spacing: -0.01em; margin: 0 0 4px 0;
+  }
+  .subsection-header p {
+    color: var(--muted); font-size: 13px; margin: 0; max-width: 60ch;
+  }
 
   /* TAB NAVIGATION */
   .tab-nav {
@@ -829,6 +904,17 @@
       </div>
       <div class="kpi-grid cols-3" id="audience-kpis"></div>
       <div class="charts" id="audience-charts" style="margin-top: 16px"></div>
+
+      <div class="subsection-divider">
+        <div class="subsection-header">
+          <div class="label">Paid Meta</div>
+          <h3>Paid acquisition</h3>
+          <p>Ad spend, link clicks, and cost per click for the selected month. Year-on-year comparison shown where prior-year data exists.</p>
+        </div>
+        <div class="kpi-grid cols-3" id="paid-meta-kpis"></div>
+        <div class="charts" id="paid-meta-charts" style="margin-top: 16px"></div>
+      </div>
+
       <div class="campaigns-card" id="campaigns-card" style="margin-top: 16px"></div>
     </section>
   </div>
@@ -965,7 +1051,8 @@ const CONFIG = {
         'The first half of May has been a continuation of the April pattern — spend running at <span class="hl">~£230 a week</span>, the <span class="hl">Henley Reel still leading link clicks</span> across Spotify and Patreon ad sets. The Patreon May 15 snapshot shows <span class="hl">803 paid subs and £5,319 MRR</span>, both modestly up on the March 23 snapshot.',
         'Audience metrics have softened from April\'s peak. Comparing May 1-17 against April 1-17 like-for-like, <span class="hl">Instagram views are down 38%</span> and IG link clicks are down 31%. Some of this is natural — the Henley Reel has been running unchanged since 27 March and is starting to show the early signs of creative fatigue.',
         'No new Patreon flow data yet for May — we\'ll have a full picture once the May report comes through. Top priority for the rest of the month is <span class="hl">getting 2-3 fresh reel variants live</span> to test against Henley before performance drops further. The cancellation retention conversation from April is still open.'
-      ]
+      ],
+      yoy_note: 'No paid activity in May 2025 — the campaign cadence is structurally different now. Mid-May 2026 sits at <span class="hl">£437 / 8,492 link clicks</span> through the 11th, on track for a continued ~£230-a-week pace.'
     },
     '2026-04': {
       period: 'April 2026',
@@ -975,7 +1062,8 @@ const CONFIG = {
         'But <span class="hl">cancellations have grown from 20 → 30 → 37</span> across the last three reported months. Net paid growth in April was only +6. The cancellation reason most often cited is "my financial situation has changed", which fits the macroeconomic picture but doesn\'t make it less of a problem.',
         'From the cancellation data we can see, <span class="hl">around a third of paid cancellations happen within 90 days of joining</span>. A new-member retention play (welcome content, a 30-day check-in, early access to something exclusive) could meaningfully change net growth. Worth a conversation about what HOHR could do.',
         'On the upside: the <span class="hl">£15 Gluttony tier punches above its weight</span> — only 18% of paid subs but 40% of revenue. The <span class="hl">Season 2 Henley reel</span> is the single best-performing creative in the whole campaign (£0.02 CPC, 63% of all Spotify clicks). Worth developing 2-3 fresh reel variants in May to reduce concentration risk before fatigue.'
-      ]
+      ],
+      yoy_note: 'No paid activity in April 2025 — the gap reflects a sporadic-boost pattern at the time vs the steady weekly cadence that now anchors April 2026 at <span class="hl">£913 spend / 21,802 link clicks</span>.'
     },
     '2026-03': {
       period: 'March 2026',
@@ -984,7 +1072,8 @@ const CONFIG = {
         'Meta spend was <span class="hl">£1,018 across March</span>, holding to a steady ~£230 a week. Instagram views grew from 55k in early March to 117k by end of month — the audience funnel was clearly responding.',
         'The pivotal moment was the launch of the <span class="hl">Season 2 Henley Reel ad set on 27 March</span>. Weekly link clicks immediately tripled — from ~1,200/week through early March to 4,522 in the final week — while ad spend stayed flat at £231. The creative was unlocking acquisition that had been left on the table.',
         'Patreon snapshot at March 23 showed <span class="hl">781 paid subs and £4,770 monthly earnings</span>, on track ahead of the April reporting cycle. With the Henley Reel performing strongly, the campaign was set up to carry that momentum into April.'
-      ]
+      ],
+      yoy_note: 'March 2025 ran <span class="hl">£699 spend / 4,196 link clicks</span> over three weeks via boosted Instagram posts. March 2026 ran <span class="hl">£1,153 / 12,523 clicks</span> over five weeks under the current strategy — clicks up 3x on roughly 1.6x the spend. CPC fell from £0.17 to £0.09 across the year.'
     }
   },
 };
@@ -1104,6 +1193,40 @@ function fmtDelta(curr, prev) {
   const text = `${sign}${Math.abs(pct) < 10 ? pct.toFixed(1) : Math.round(pct)}% vs prev`;
   return { text, cls: diff > 0 ? 'up' : 'down' };
 }
+
+// Find the prior-year row for a given month in an aggregateMonthly() array.
+// Returns null if not found, or if the prior-year value is zero/null
+// (so we don't render meaningless "+∞% YoY" pills).
+function priorYearMonth(monthlyData, monthStr) {
+  if (!monthStr) return null;
+  const [y, m] = monthStr.split('-');
+  const priorYear = (parseInt(y, 10) - 1).toString();
+  const priorKey = `${priorYear}-${m}`;
+  return monthlyData.find(row => row.month === priorKey) || null;
+}
+
+// Build a YoY pill HTML for a given metric. Returns empty string if YoY can't be
+// computed (no prior-year data, or prior-year value is zero/null). Reverse direction
+// is auto-detected for "lower-is-better" metrics like CPC.
+function yoyPill(currentValue, priorValue, opts) {
+  opts = opts || {};
+  if (currentValue === null || currentValue === undefined) return '';
+  if (priorValue === null || priorValue === undefined) return '';
+  if (priorValue === 0) return '';
+  const diff = currentValue - priorValue;
+  const pct = (diff / priorValue) * 100;
+  if (Math.abs(pct) < 0.5) return `<span class="yoy-pill flat">flat vs ${opts.priorLabel || 'last year'}</span>`;
+  const sign = diff > 0 ? '+' : '';
+  let cls;
+  if (opts.lowerIsBetter) {
+    cls = diff > 0 ? 'down' : 'up';
+  } else {
+    cls = diff > 0 ? 'up' : 'down';
+  }
+  const pctText = Math.abs(pct) < 10 ? pct.toFixed(1) : Math.round(pct);
+  return `<span class="yoy-pill ${cls}">${sign}${pctText}% vs ${opts.priorLabel || 'last year'}</span>`;
+}
+
 function fmtWeekLabel(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr + 'T00:00:00');
@@ -1276,11 +1399,15 @@ function renderMonthlyRead() {
   }
 
   const mr = reads[key];
+  const yoyNoteHtml = mr.yoy_note
+    ? `<div class="yoy-note"><span class="yoy-note-label">vs same month last year</span>${mr.yoy_note}</div>`
+    : '';
   c.innerHTML = `
     <div class="monthly-read">
       <div class="monthly-read-meta">${mr.period} · The read</div>
       <h2>${mr.title}</h2>
       ${mr.paragraphs.map(p => `<p>${p}</p>`).join('')}
+      ${yoyNoteHtml}
     </div>
   `;
 }
@@ -1359,11 +1486,23 @@ function renderReadTldr() {
   if (!isInProgress && idx > 0 && data[idx - 1].meta_spend !== null && spend !== null) {
     spendDelta = fmtDelta(spend, data[idx - 1].meta_spend);
   }
+  // YoY pill for spend — only when this is the monthly view AND prior year has real spend.
+  // We suppress on in-progress months to avoid comparing a partial month against a full one.
+  let spendYoyHtml = '';
+  if (state.view === 'monthly' && !isInProgress && spend !== null) {
+    const prior = priorYearMonth(data, cur.month);
+    if (prior && prior.meta_spend && prior.meta_spend > 0) {
+      const priorLabel = fmtMonthLabel(prior.month + '-01');
+      spendYoyHtml = yoyPill(spend, prior.meta_spend, { priorLabel });
+    }
+  }
+  const spendBaseContext = partialSuffix || (state.view === 'weekly' ? 'This week' : 'This month');
+  const spendContext = spendYoyHtml ? `${spendBaseContext}<br>${spendYoyHtml}` : spendBaseContext;
   const spendTile = renderKpiTile(
     'Ad spend',
     spend !== null ? fmt(spend, 'currency') : '—',
     spendDelta,
-    partialSuffix || (state.view === 'weekly' ? 'This week' : 'This month')
+    spendContext
   );
 
   c.innerHTML = [listensTile, mrrTile, netSubsTile, spendTile].join('');
@@ -2034,6 +2173,92 @@ function renderAudienceCharts() {
     metrics.map(m => renderChart(m, data)).join('');
 }
 
+/* RENDER: PAID META — spend, link clicks, CPC for selected month with YoY pills,
+   plus a spend + clicks + CPC trend chart across the available history. */
+function renderPaidMeta() {
+  const kpiHost = document.getElementById('paid-meta-kpis');
+  const chartHost = document.getElementById('paid-meta-charts');
+  if (!kpiHost || !chartHost) return;
+
+  const data = aggregateMonthly(state.weekly);
+  if (data.length === 0) {
+    kpiHost.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No data yet</div>';
+    chartHost.innerHTML = '';
+    return;
+  }
+
+  // Add a derived cpc field on each monthly row, for both the KPI and chart use.
+  const enriched = data.map(d => {
+    const cpc = (d.meta_spend !== null && d.meta_clicks !== null && d.meta_clicks > 0)
+      ? d.meta_spend / d.meta_clicks
+      : null;
+    return { ...d, cpc };
+  });
+
+  const idx = enriched.findIndex(m => m.month === state.selectedMonth);
+  const cur = idx >= 0 ? enriched[idx] : enriched[enriched.length - 1];
+
+  const spend = cur.meta_spend;
+  const clicks = cur.meta_clicks;
+  const cpc = cur.cpc;
+
+  const isInProgress = !!cur.in_progress;
+  const partialSuffix = isInProgress
+    ? `${cur.days_with_data} of ${cur.days_in_month} days · in progress`
+    : 'This month';
+
+  const prior = priorYearMonth(enriched, cur.month);
+  const priorYearLabel = prior ? fmtMonthLabel(prior.month + '-01') : null;
+
+  // Spend YoY — only meaningful if prior month had non-zero spend, and we're not in-progress.
+  const spendYoy = (!isInProgress && prior && prior.meta_spend && prior.meta_spend > 0)
+    ? yoyPill(spend, prior.meta_spend, { priorLabel: priorYearLabel })
+    : '';
+
+  const clicksYoy = (!isInProgress && prior && prior.meta_clicks && prior.meta_clicks > 0)
+    ? yoyPill(clicks, prior.meta_clicks, { priorLabel: priorYearLabel })
+    : '';
+
+  // CPC is lower-is-better.
+  const cpcYoy = (!isInProgress && prior && prior.cpc && cur.cpc)
+    ? yoyPill(cur.cpc, prior.cpc, { priorLabel: priorYearLabel, lowerIsBetter: true })
+    : '';
+
+  const spendTile = renderKpiTile(
+    'Ad spend',
+    spend !== null && spend > 0 ? fmt(spend, 'currency') : (spend === 0 ? '£0' : '—'),
+    null,
+    spendYoy ? `${partialSuffix}<br>${spendYoy}` : partialSuffix
+  );
+  const clicksTile = renderKpiTile(
+    'Link clicks',
+    clicks !== null && clicks > 0 ? fmt(clicks, 'number') : (clicks === 0 ? '0' : '—'),
+    null,
+    clicksYoy ? `${partialSuffix}<br>${clicksYoy}` : partialSuffix
+  );
+  const cpcTile = renderKpiTile(
+    'Cost per click',
+    cpc !== null ? '£' + cpc.toFixed(2) : '—',
+    null,
+    cpcYoy ? `Lower is better<br>${cpcYoy}` : 'Lower is better'
+  );
+
+  kpiHost.innerHTML = [spendTile, clicksTile, cpcTile].join('');
+
+  // Charts: spend, link clicks, CPC over time. Only render charts when there's enough history.
+  const monthsWithSpend = enriched.filter(m => m.meta_spend !== null && m.meta_spend > 0).length;
+  if (monthsWithSpend < 2) {
+    chartHost.innerHTML = '';
+    return;
+  }
+  const chartMetrics = [
+    { key: 'meta_spend',  label: 'Monthly ad spend', format: 'currency' },
+    { key: 'meta_clicks', label: 'Monthly link clicks', format: 'number' },
+    { key: 'cpc',         label: 'Cost per click', format: 'currency-precise' },
+  ];
+  chartHost.innerHTML = chartMetrics.map(m => renderChart(m, enriched)).join('');
+}
+
 /* RENDER: CAMPAIGNS */
 function renderCampaigns() {
   const c = document.getElementById('campaigns-card');
@@ -2156,6 +2381,7 @@ function renderAll() {
     case 'social':
       renderAudienceKpis();
       renderAudienceCharts();
+      renderPaidMeta();
       renderCampaigns();
       break;
     case 'alldata':
@@ -2191,7 +2417,16 @@ function renderSectionControls() {
     pickerHtml = `
       <div class="month-picker" data-picker="month">
         <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous month">‹</button>
-        <span class="month-picker-label">${monthName}</span>
+        <span class="month-picker-wrap">
+          <button class="month-picker-label-btn" data-month-dropdown-trigger aria-label="Pick a month">${monthName}</button>
+          <div class="month-picker-dropdown" data-month-dropdown>
+            ${months.slice().reverse().map(m => {
+              const dataClass = (m.meta_spend !== null && m.meta_spend > 0) ? 'has-data' : 'no-data';
+              const currentClass = m.month === state.selectedMonth ? 'current' : '';
+              return `<button class="month-picker-option ${dataClass} ${currentClass}" data-month-jump="${m.month}">${fmtMonthLabel(m.month + '-01')}</button>`;
+            }).join('')}
+          </div>
+        </span>
         ${progressTag}
         <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next month">›</button>
       </div>
@@ -2217,6 +2452,37 @@ document.addEventListener('click', (e) => {
   if (newIdx < 0 || newIdx >= months.length) return;
   state.selectedMonth = months[newIdx].month;
   renderAll();
+});
+
+// Toggle the month dropdown when its trigger button is clicked.
+document.addEventListener('click', (e) => {
+  const trigger = e.target.closest('[data-month-dropdown-trigger]');
+  if (trigger) {
+    e.stopPropagation();
+    // Close any other dropdowns first
+    document.querySelectorAll('[data-month-dropdown].open').forEach(dd => {
+      if (dd !== trigger.parentElement.querySelector('[data-month-dropdown]')) {
+        dd.classList.remove('open');
+      }
+    });
+    const dropdown = trigger.parentElement.querySelector('[data-month-dropdown]');
+    if (dropdown) dropdown.classList.toggle('open');
+    return;
+  }
+
+  // Jumping to a specific month
+  const jump = e.target.closest('[data-month-jump]');
+  if (jump) {
+    state.selectedMonth = jump.dataset.monthJump;
+    document.querySelectorAll('[data-month-dropdown].open').forEach(dd => dd.classList.remove('open'));
+    renderAll();
+    return;
+  }
+
+  // Click outside closes any open dropdown
+  if (!e.target.closest('.month-picker-wrap')) {
+    document.querySelectorAll('[data-month-dropdown].open').forEach(dd => dd.classList.remove('open'));
+  }
 });
 
 function attachTooltips() {
