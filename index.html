@@ -98,22 +98,6 @@
   .monthly-read p:last-child { margin-bottom: 0; }
   .monthly-read .hl { background: rgba(184, 92, 0, 0.15); padding: 1px 4px; }
 
-  /* VIEW TOGGLE */
-  .view-toggle {
-    display: inline-flex; border: 1.5px solid var(--ink);
-    background: var(--card);
-  }
-  .view-toggle button {
-    background: transparent; border: none; padding: 6px 14px;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--ink);
-    cursor: pointer; transition: background 0.15s;
-    line-height: 1.4;
-  }
-  .view-toggle button + button { border-left: 1.5px solid var(--ink); }
-  .view-toggle button.active { background: var(--ink); color: var(--card); }
-  .view-toggle button:hover:not(.active) { background: var(--paper-2); }
-
   /* MONTH PICKER — shown when monthly view is active */
   .month-picker {
     display: inline-flex; align-items: center; gap: 8px;
@@ -218,6 +202,34 @@
   }
   .section-header p {
     font-size: 14px; color: var(--muted); line-height: 1.5; max-width: 56ch;
+  }
+
+  /* VALUE STRIP — slim stat row above Patreon KPIs */
+  .value-strip {
+    display: flex; align-items: baseline; flex-wrap: wrap;
+    gap: 24px;
+    padding: 14px 22px; margin-bottom: 16px;
+    background: color-mix(in srgb, var(--section-color, var(--accent)) 8%, var(--card));
+    border-left: 3px solid var(--section-color, var(--accent));
+  }
+  .value-strip-item {
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .value-strip-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .value-strip-value {
+    font-family: var(--display);
+    font-size: 22px; font-weight: 600; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .value-strip-context {
+    font-size: 12px; color: var(--muted);
+  }
+  @media (max-width: 720px) {
+    .value-strip { gap: 14px; padding: 12px 16px; }
+    .value-strip-value { font-size: 18px; }
   }
 
   /* KPI TILES */
@@ -795,6 +807,7 @@
         </div>
         <div class="section-controls" data-controls-host></div>
       </div>
+      <div id="value-strip" class="value-strip"></div>
       <div class="kpi-grid cols-4" id="money-kpis"></div>
       <div class="charts" id="money-charts" style="margin-top: 16px"></div>
       <div id="tier-mix-container" style="margin-top: 16px"></div>
@@ -875,9 +888,10 @@ const CONFIG = {
   CAMPAIGNS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=1314946819&single=true&output=csv',
   SHEET_EDIT_URL: 'https://docs.google.com/spreadsheets/d/1OMTErHf9rDp7rCfJlEhvc30LZBqQbBheO4yyr7Sr6eM/edit',
 
-  // Lifetime value benchmark — used to contextualise cost-per-sub
-  // Update annually from Patreon export analysis
-  SUB_LTV: 98,
+  // Lifetime value benchmarks — used in the Patreon value strip and tile context.
+  // Update annually from Patreon CSV export analysis.
+  SUB_LTV: 98,            // mean across 1,198 ever-paid subs
+  SUB_LTV_MEDIAN: 68,     // median (more robust to high-tier outliers)
 
   // Tier mix — updated quarterly from Patreon snapshot
   TIER_MIX: [
@@ -975,6 +989,8 @@ const CONFIG = {
 };
 
 let state = { view: 'monthly', selectedMonth: null, selectedWeek: null, activeTab: 'read', weekly: [], campaigns: [] };
+// state.view stays 'monthly' — the weekly view was retired. Weekly granularity is
+// still available in the All Data tab, which uses state.weekly directly.
 
 /* CSV PARSING */
 function parseCSV(text) {
@@ -1612,6 +1628,54 @@ function renderKpiTile(label, value, deltaInfo, context) {
   `;
 }
 
+/* RENDER: VALUE STRIP — Patreon economics summary above the KPI tiles.
+   Shows mean LTV, median LTV, and current ARPU (revenue per paying sub). */
+function renderValueStrip() {
+  const c = document.getElementById('value-strip');
+  if (!c) return;
+
+  const ltv = CONFIG.SUB_LTV;
+  const median = CONFIG.SUB_LTV_MEDIAN;
+
+  // Compute ARPU from the latest known MRR + total subs snapshot
+  const latestMrr = latestValue(state.weekly, 'patreon_mrr');
+  const latestSubs = latestValue(state.weekly, 'patreon_total_subs');
+  const arpu = (latestMrr.value && latestSubs.value)
+    ? latestMrr.value / latestSubs.value
+    : null;
+
+  const parts = [];
+
+  if (ltv) {
+    parts.push(`
+      <div class="value-strip-item">
+        <span class="value-strip-label">Avg value per sub</span>
+        <span class="value-strip-value">£${ltv}</span>
+        <span class="value-strip-context">· lifetime</span>
+      </div>
+    `);
+  }
+
+  if (arpu) {
+    parts.push(`
+      <div class="value-strip-item">
+        <span class="value-strip-label">Monthly per sub</span>
+        <span class="value-strip-value">£${arpu.toFixed(2)}</span>
+        <span class="value-strip-context">· current ARPU</span>
+      </div>
+    `);
+  }
+
+  if (parts.length === 0) {
+    c.innerHTML = '';
+    c.style.display = 'none';
+    return;
+  }
+
+  c.style.display = '';
+  c.innerHTML = parts.join('');
+}
+
 /* RENDER: MONEY KPIs */
 function renderMoneyKpis() {
   const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
@@ -2022,11 +2086,9 @@ function renderCampaigns() {
 
 /* RENDER: TABLE */
 function renderTable() {
-  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
-  const xKey = state.view === 'weekly' ? 'week_starting' : 'month';
-  const labelFn = state.view === 'weekly' ? fmtWeekLabel : fmtMonthLabel;
-  document.getElementById('table-title').textContent =
-    state.view === 'weekly' ? 'Weekly entries' : 'Monthly rollup';
+  // The All Data tab always shows weekly rows — it's the raw underlying data.
+  const data = state.weekly;
+  document.getElementById('table-title').textContent = 'Weekly entries';
   if (data.length === 0) {
     document.getElementById('data-table').innerHTML =
       '<tbody><tr><td class="empty">No data yet</td></tr></tbody>';
@@ -2047,12 +2109,12 @@ function renderTable() {
     { key: 'new_ig_follows',      label: 'IG follows',  format: 'number' },
     { key: 'new_fb_follows',      label: 'FB follows',  format: 'number' },
   ];
-  const headers = [state.view === 'weekly' ? 'Week' : 'Month', ...cols.map(c => c.label)];
+  const headers = ['Week', ...cols.map(c => c.label)];
   const reversed = [...data].reverse();
   const rows = reversed.map(row => {
-    let label = labelFn(row[xKey]);
-    if (state.view === 'monthly' && row.in_progress) {
-      label += ` <span class="in-progress-badge">in progress · ${row.days_with_data}/${row.days_in_month}d</span>`;
+    let label = fmtWeekLabel(row.week_starting);
+    if (isWeekInProgress(row)) {
+      label += ` <span class="in-progress-badge">in progress · ${weekDaysWithData(row)}/7d</span>`;
     }
     const cells = [
       `<td>${label}</td>`,
@@ -2084,6 +2146,7 @@ function renderAll() {
       renderListensCharts();
       break;
     case 'patreon':
+      renderValueStrip();
       renderMoneyKpis();
       renderMoneyCharts();
       renderTierMix();
@@ -2102,97 +2165,56 @@ function renderAll() {
 }
 
 /* RENDER: MONTH PICKER */
-// Build the section-control bar: Weekly/Monthly toggle + period picker.
+// Build the section-control bar: month picker for data tabs.
+// All Data tab shows weekly rows always, so no picker there.
 // Renders into every <div data-controls-host> on the page; uses event delegation for clicks.
 function renderSectionControls() {
   const hosts = document.querySelectorAll('[data-controls-host]');
   if (hosts.length === 0) return;
 
   let pickerHtml = '';
-
-  if (state.view === 'monthly') {
-    const months = aggregateMonthly(state.weekly);
-    if (months.length > 0) {
-      // Default selectedMonth to the latest if not set or no longer in data
-      if (!state.selectedMonth || !months.some(m => m.month === state.selectedMonth)) {
-        state.selectedMonth = months[months.length - 1].month;
-      }
-      const idx = months.findIndex(m => m.month === state.selectedMonth);
-      const cur = months[idx];
-      const prevDisabled = idx <= 0 ? 'disabled' : '';
-      const nextDisabled = idx >= months.length - 1 ? 'disabled' : '';
-      const monthName = fmtMonthLabel(cur.month + '-01');
-      const progressTag = cur.in_progress
-        ? `<span class="month-picker-progress">in progress · ${cur.days_with_data}/${cur.days_in_month}d</span>`
-        : '';
-      pickerHtml = `
-        <div class="month-picker" data-picker="month">
-          <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous month">‹</button>
-          <span class="month-picker-label">${monthName}</span>
-          ${progressTag}
-          <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next month">›</button>
-        </div>
-      `;
+  const months = aggregateMonthly(state.weekly);
+  if (months.length > 0) {
+    // Default selectedMonth to the latest if not set or no longer in data
+    if (!state.selectedMonth || !months.some(m => m.month === state.selectedMonth)) {
+      state.selectedMonth = months[months.length - 1].month;
     }
-  } else if (state.view === 'weekly') {
-    const weeks = state.weekly;
-    if (weeks.length > 0) {
-      if (!state.selectedWeek || !weeks.some(w => w.week_starting === state.selectedWeek)) {
-        state.selectedWeek = weeks[weeks.length - 1].week_starting;
-      }
-      const idx = weeks.findIndex(w => w.week_starting === state.selectedWeek);
-      const cur = weeks[idx];
-      const prevDisabled = idx <= 0 ? 'disabled' : '';
-      const nextDisabled = idx >= weeks.length - 1 ? 'disabled' : '';
-      const weekLabel = 'Week of ' + fmtWeekLabel(cur.week_starting);
-      const inProg = isWeekInProgress(cur);
-      const progressTag = inProg
-        ? `<span class="month-picker-progress">in progress · ${weekDaysWithData(cur)}/7d</span>`
-        : '';
-      pickerHtml = `
-        <div class="month-picker" data-picker="week">
-          <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous week">‹</button>
-          <span class="month-picker-label">${weekLabel}</span>
-          ${progressTag}
-          <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next week">›</button>
-        </div>
-      `;
-    }
+    const idx = months.findIndex(m => m.month === state.selectedMonth);
+    const cur = months[idx];
+    const prevDisabled = idx <= 0 ? 'disabled' : '';
+    const nextDisabled = idx >= months.length - 1 ? 'disabled' : '';
+    const monthName = fmtMonthLabel(cur.month + '-01');
+    const progressTag = cur.in_progress
+      ? `<span class="month-picker-progress">in progress · ${cur.days_with_data}/${cur.days_in_month}d</span>`
+      : '';
+    pickerHtml = `
+      <div class="month-picker" data-picker="month">
+        <button class="month-picker-arrow" data-step="-1" ${prevDisabled} aria-label="Previous month">‹</button>
+        <span class="month-picker-label">${monthName}</span>
+        ${progressTag}
+        <button class="month-picker-arrow" data-step="1" ${nextDisabled} aria-label="Next month">›</button>
+      </div>
+    `;
   }
 
-  const toggleHtml = `
-    <div class="view-toggle" role="tablist">
-      <button class="${state.view === 'weekly' ? 'active' : ''}" data-view="weekly" role="tab">Weekly</button>
-      <button class="${state.view === 'monthly' ? 'active' : ''}" data-view="monthly" role="tab">Monthly</button>
-    </div>
-  `;
-
-  const html = toggleHtml + pickerHtml;
-  hosts.forEach(h => { h.innerHTML = html; });
+  hosts.forEach(h => {
+    // Hide the picker on the All Data tab (it shows weekly rows, not monthly)
+    const onAllData = h.closest('[data-panel="alldata"]') !== null;
+    h.innerHTML = onAllData ? '' : pickerHtml;
+  });
 }
 
-// Delegated handler for picker arrows — works for both month and week pickers.
+// Delegated handler for month-picker arrows.
 document.addEventListener('click', (e) => {
   const arrow = e.target.closest('.month-picker-arrow');
   if (!arrow || arrow.disabled) return;
-  const pickerType = arrow.closest('[data-picker]')?.dataset.picker;
+  const months = aggregateMonthly(state.weekly);
+  const idx = months.findIndex(m => m.month === state.selectedMonth);
+  if (idx < 0) return;
   const step = parseInt(arrow.dataset.step, 10);
-
-  if (pickerType === 'week') {
-    const weeks = state.weekly;
-    const idx = weeks.findIndex(w => w.week_starting === state.selectedWeek);
-    if (idx < 0) return;
-    const newIdx = idx + step;
-    if (newIdx < 0 || newIdx >= weeks.length) return;
-    state.selectedWeek = weeks[newIdx].week_starting;
-  } else {
-    const months = aggregateMonthly(state.weekly);
-    const idx = months.findIndex(m => m.month === state.selectedMonth);
-    if (idx < 0) return;
-    const newIdx = idx + step;
-    if (newIdx < 0 || newIdx >= months.length) return;
-    state.selectedMonth = months[newIdx].month;
-  }
+  const newIdx = idx + step;
+  if (newIdx < 0 || newIdx >= months.length) return;
+  state.selectedMonth = months[newIdx].month;
   renderAll();
 });
 
@@ -2210,16 +2232,6 @@ function attachTooltips() {
     dot.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
   });
 }
-
-// View-toggle clicks are handled by delegation since toggles are rendered per-section
-document.addEventListener('click', (e) => {
-  const toggleBtn = e.target.closest('.view-toggle button[data-view]');
-  if (toggleBtn) {
-    state.view = toggleBtn.dataset.view;
-    renderAll();
-    return;
-  }
-});
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
