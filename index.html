@@ -942,15 +942,36 @@ const CONFIG = {
     { month: '2024-12', label: 'Dec spike' },
   ],
 
-  MONTHLY_READ: {
-    period: 'May 2026',
-    title: "Acquisition is strong, retention needs a look",
-    paragraphs: [
-      'The campaign acquired <span class="hl">43 new paid subs in April</span>, consistent with March, on a total Meta spend of <span class="hl">£973</span>. That works out at £22.64 per gross paid sub against an average lifetime value of £98 — every acquisition is comfortably profitable on lifetime terms.',
-      'But <span class="hl">cancellations have grown from 20 → 30 → 37</span> across the last three reported months. Net paid growth in April was only +6. The cancellation reason most often cited is "my financial situation has changed", which fits the macroeconomic picture but doesn\'t make it less of a problem.',
-      'From the cancellation data we can see, <span class="hl">around a third of paid cancellations happen within 90 days of joining</span>. A new-member retention play (welcome content, a 30-day check-in, early access to something exclusive) could meaningfully change net growth. Worth a conversation about what HOHR could do.',
-      'On the upside: the <span class="hl">£15 Gluttony tier punches above its weight</span> — only 18% of paid subs but 40% of revenue. The <span class="hl">Season 2 Henley reel</span> is the single best-performing creative in the whole campaign (£0.02 CPC, 63% of all Spotify clicks). Worth developing 2-3 fresh reel variants in May to reduce concentration risk before fatigue.'
-    ]
+  // Keyed by YYYY-MM. Each read pairs with the month picker in the Overview tab.
+  MONTHLY_READS: {
+    '2026-05': {
+      period: 'May 2026',
+      title: "Holding steady, watching for fatigue",
+      paragraphs: [
+        'The first half of May has been a continuation of the April pattern — spend running at <span class="hl">~£230 a week</span>, the <span class="hl">Henley Reel still leading link clicks</span> across Spotify and Patreon ad sets. The Patreon May 15 snapshot shows <span class="hl">803 paid subs and £5,319 MRR</span>, both modestly up on the March 23 snapshot.',
+        'Audience metrics have softened from April\'s peak. Comparing May 1-17 against April 1-17 like-for-like, <span class="hl">Instagram views are down 38%</span> and IG link clicks are down 31%. Some of this is natural — the Henley Reel has been running unchanged since 27 March and is starting to show the early signs of creative fatigue.',
+        'No new Patreon flow data yet for May — we\'ll have a full picture once the May report comes through. Top priority for the rest of the month is <span class="hl">getting 2-3 fresh reel variants live</span> to test against Henley before performance drops further. The cancellation retention conversation from April is still open.'
+      ]
+    },
+    '2026-04': {
+      period: 'April 2026',
+      title: "Acquisition is strong, retention needs a look",
+      paragraphs: [
+        'The campaign acquired <span class="hl">43 new paid subs in April</span>, consistent with March, on a total Meta spend of <span class="hl">£973</span>. That works out at £22.64 per gross paid sub against an average lifetime value of £98 — every acquisition is comfortably profitable on lifetime terms.',
+        'But <span class="hl">cancellations have grown from 20 → 30 → 37</span> across the last three reported months. Net paid growth in April was only +6. The cancellation reason most often cited is "my financial situation has changed", which fits the macroeconomic picture but doesn\'t make it less of a problem.',
+        'From the cancellation data we can see, <span class="hl">around a third of paid cancellations happen within 90 days of joining</span>. A new-member retention play (welcome content, a 30-day check-in, early access to something exclusive) could meaningfully change net growth. Worth a conversation about what HOHR could do.',
+        'On the upside: the <span class="hl">£15 Gluttony tier punches above its weight</span> — only 18% of paid subs but 40% of revenue. The <span class="hl">Season 2 Henley reel</span> is the single best-performing creative in the whole campaign (£0.02 CPC, 63% of all Spotify clicks). Worth developing 2-3 fresh reel variants in May to reduce concentration risk before fatigue.'
+      ]
+    },
+    '2026-03': {
+      period: 'March 2026',
+      title: "The campaign finds its rhythm",
+      paragraphs: [
+        'First full month of agency-led campaign activity. Meta spend was <span class="hl">£1,018 across March</span>, holding to a steady ~£230 a week. Instagram views grew from 55k in early March to 117k by end of month — the early audience funnel was clearly responding.',
+        'The pivotal moment was the launch of the <span class="hl">Season 2 Henley Reel ad set on 27 March</span>. Weekly link clicks immediately tripled — from ~1,200/week through early March to 4,522 in the final week — while ad spend stayed flat at £231. The creative was unlocking acquisition that had been left on the table.',
+        'Patreon snapshot at March 23 showed <span class="hl">781 paid subs and £4,770 monthly earnings</span>, on track ahead of the April reporting cycle. The agency takeover (Feb 24) was beginning to show in the numbers, with the Henley Reel set up to carry the campaign into April.'
+      ]
+    }
   },
 };
 
@@ -1163,11 +1184,38 @@ function costPerNewSub(row) {
   return row.meta_spend / row.new_patreon_subs;
 }
 
-/* RENDER: MONTHLY READ */
+/* RENDER: MONTHLY READ — picks the editorial copy matching the selected month */
 function renderMonthlyRead() {
   const c = document.getElementById('monthly-read-container');
-  const mr = CONFIG.MONTHLY_READ;
-  if (!mr || !mr.paragraphs || mr.paragraphs.length === 0) { c.innerHTML = ''; return; }
+  const reads = CONFIG.MONTHLY_READS || {};
+  const keys = Object.keys(reads).sort();
+  if (keys.length === 0) { c.innerHTML = ''; return; }
+
+  // In weekly view, default to the most recent read.
+  // In monthly view, show the read matching the selected month.
+  // If the selected month has no read written, show a clear "no read" message
+  // rather than silently falling back (which would be confusing for older months).
+  let key, isPlaceholder = false;
+  if (state.view === 'weekly') {
+    key = keys[keys.length - 1];
+  } else {
+    key = state.selectedMonth;
+    if (!reads[key]) isPlaceholder = true;
+  }
+
+  if (isPlaceholder) {
+    const monthName = key ? fmtMonthLabel(key + '-01') : 'this period';
+    c.innerHTML = `
+      <div class="monthly-read">
+        <div class="monthly-read-meta">${monthName} · The read</div>
+        <h2 style="color: var(--muted)">No read written for this month</h2>
+        <p style="color: var(--muted); margin-top: 6px">The editorial summary covers months where the agency has been live (March 2026 onward). Use the month picker to navigate.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const mr = reads[key];
   c.innerHTML = `
     <div class="monthly-read">
       <div class="monthly-read-meta">${mr.period} · The read</div>
