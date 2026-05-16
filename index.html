@@ -2636,57 +2636,89 @@ function renderMoneyKpis() {
     }
   }
 
-  // Stock metrics: walk back to last non-null value UP TO and including the selected period.
+  // Look up PatreonHistory data for the focused month (and the previous month for deltas).
+  // PatreonHistory is the authoritative source for joiners, cancellations, MRR end-of-month,
+  // and total paid subs. We fall back to the Weekly sheet's columns only when PatreonHistory
+  // is missing data for that field, for backwards-compat.
+  const ph = state.view === 'monthly' ? patreonMonth(latest.month) : null;
+  const phPrev = state.view === 'monthly' && prev ? patreonMonth(prev.month) : null;
+  const prefer = (phField, weeklyField, row, phRow) => {
+    if (phRow && phRow[phField] !== null && phRow[phField] !== undefined) return phRow[phField];
+    if (row && row[weeklyField] !== null && row[weeklyField] !== undefined) return row[weeklyField];
+    return null;
+  };
+
+  // Stock metrics: MRR + total subs at end of period.
   // Stock-metric deltas (MRR, total subs) ARE fair to show because they're point-in-time
   // snapshots, not period accumulations.
-  const sliced = data.slice(0, latestIdx + 1);
-  const mrrRes = latestValue(sliced, 'patreon_mrr');
-  const mrr = mrrRes.value;
+  let mrr = prefer('mrr_end', 'patreon_mrr', latest, ph);
   let mrrDelta = null;
-  if (mrrRes.index > 0) {
-    const earlier = latestValue(sliced.slice(0, mrrRes.index), 'patreon_mrr');
-    if (earlier.value !== null) mrrDelta = fmtDelta(mrr, earlier.value);
+  if (mrr !== null && prev) {
+    const prevMrr = prefer('mrr_end', 'patreon_mrr', prev, phPrev);
+    if (prevMrr !== null) mrrDelta = fmtDelta(mrr, prevMrr);
+  }
+  // If still null, walk back to the last known MRR snapshot (stock metric — carry forward).
+  if (mrr === null) {
+    const sliced = data.slice(0, latestIdx + 1);
+    const mrrRes = latestValue(sliced, 'patreon_mrr');
+    mrr = mrrRes.value;
   }
 
-  const totalSubsRes = latestValue(sliced, 'patreon_total_subs');
+  let totalPaidSubs = prefer('total_paid_subs_end', 'patreon_total_subs', latest, ph);
+  if (totalPaidSubs === null) {
+    const sliced = data.slice(0, latestIdx + 1);
+    const totalSubsRes = latestValue(sliced, 'patreon_total_subs');
+    totalPaidSubs = totalSubsRes.value;
+  }
 
-  // Flow metrics: this period's value only (don't carry over).
-  // Deltas only shown when the month is complete.
-  const newSubs = latest.new_patreon_subs;
+  // Flow metrics: this period only. Prefer PatreonHistory's monthly numbers.
+  const newSubs = prefer('new_paid_joiners', 'new_patreon_subs', latest, ph);
   let newSubsDelta = null;
-  if (!isInProgress && newSubs !== null && prev && prev.new_patreon_subs !== null) {
-    newSubsDelta = fmtDelta(newSubs, prev.new_patreon_subs);
+  if (!isInProgress && newSubs !== null && prev) {
+    const prevNewSubs = prefer('new_paid_joiners', 'new_patreon_subs', prev, phPrev);
+    if (prevNewSubs !== null) newSubsDelta = fmtDelta(newSubs, prevNewSubs);
   }
 
-  const cancels = latest.paid_cancellations;
+  const cancels = prefer('paid_cancellations', 'paid_cancellations', latest, ph);
   let cancelsDelta = null;
-  if (!isInProgress && cancels !== null && prev && prev.paid_cancellations !== null) {
-    const raw = fmtDelta(cancels, prev.paid_cancellations);
-    cancelsDelta = {
-      text: raw.text,
-      cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
-    };
+  if (!isInProgress && cancels !== null && prev) {
+    const prevCancels = prefer('paid_cancellations', 'paid_cancellations', prev, phPrev);
+    if (prevCancels !== null) {
+      const raw = fmtDelta(cancels, prevCancels);
+      cancelsDelta = {
+        text: raw.text,
+        // Inverted for cancellations: more cancellations is bad (red, down)
+        cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
+      };
+    }
   }
 
   // Net growth only valid when both numbers exist
   const netGrowth = (newSubs !== null && cancels !== null) ? newSubs - cancels : null;
 
-  const cps = costPerNewSub(latest);
-  const cpsPrev = prev ? costPerNewSub(prev) : null;
+  // Cost per new sub uses PatreonHistory's joiner count when available
+  const cps = (latest.meta_spend && newSubs) ? latest.meta_spend / newSubs : null;
+  // Previous-period CPS for delta — same approach
+  let cpsPrev = null;
+  if (prev) {
+    const prevNewSubs = prefer('new_paid_joiners', 'new_patreon_subs', prev, phPrev);
+    if (prev.meta_spend && prevNewSubs) cpsPrev = prev.meta_spend / prevNewSubs;
+  }
   let cpsDelta = null;
   if (!isInProgress && cps !== null && cpsPrev !== null) {
     const raw = fmtDelta(cps, cpsPrev);
     cpsDelta = {
       text: raw.text,
+      // Inverted: cheaper CPS is good (green, up)
       cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
     };
   }
 
   document.getElementById('money-kpis').innerHTML = [
-    renderKpiTile('Patreon MRR', fmt(mrr, 'currency'), mrrDelta,
-      totalSubsRes.value !== null ? `Total paid subs: ${fmt(totalSubsRes.value, 'number')}` : 'Awaiting Patreon snapshot'),
-    renderKpiTile(`New paid subs ${periodLabel}`, fmt(newSubs, 'number'), newSubsDelta,
-      periodSuffix || (latest.meta_spend !== null ? `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}` : 'Awaiting weekly data')),
+    renderKpiTile('Patreon MRR', mrr !== null ? fmt(mrr, 'currency') : '—', mrrDelta,
+      totalPaidSubs !== null ? `Total paid subs: ${fmt(totalPaidSubs, 'number')}` : 'Awaiting Patreon snapshot'),
+    renderKpiTile(`New paid subs ${periodLabel}`, newSubs !== null ? fmt(newSubs, 'number') : '—', newSubsDelta,
+      periodSuffix || (latest.meta_spend !== null ? `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}` : 'Awaiting joiner data')),
     renderCancellationsTile(cancels, cancelsDelta, netGrowth, periodSuffix),
     renderCostPerSubTile(cps, cpsDelta),
   ].join('');
@@ -3079,10 +3111,30 @@ function renderChart(metric, data) {
 }
 
 function renderMoneyCharts() {
-  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  // Charts use the monthly aggregation. For MRR + new subs, we prefer PatreonHistory
+  // (authoritative) and fall back to Weekly-derived values for any gaps.
+  // We rebind into temporary fields ('mrr_chart' and 'new_subs_chart') so we don't
+  // contaminate the actual sheet-derived fields elsewhere.
+  const rawData = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  const data = rawData.map(row => {
+    const enriched = { ...row };
+    if (state.view === 'monthly' && row.month) {
+      const ph = patreonMonth(row.month);
+      enriched.mrr_chart = (ph && ph.mrr_end !== null && ph.mrr_end !== undefined)
+        ? ph.mrr_end
+        : row.patreon_mrr;
+      enriched.new_subs_chart = (ph && ph.new_paid_joiners !== null && ph.new_paid_joiners !== undefined)
+        ? ph.new_paid_joiners
+        : row.new_patreon_subs;
+    } else {
+      enriched.mrr_chart = row.patreon_mrr;
+      enriched.new_subs_chart = row.new_patreon_subs;
+    }
+    return enriched;
+  });
   const metrics = [
-    { key: 'patreon_mrr',      label: 'Patreon MRR', format: 'currency' },
-    { key: 'new_patreon_subs', label: 'New subs',    format: 'number' },
+    { key: 'mrr_chart',      label: 'Patreon MRR', format: 'currency' },
+    { key: 'new_subs_chart', label: 'New paid subs', format: 'number' },
   ];
   document.getElementById('money-charts').innerHTML =
     metrics.map(m => renderChart(m, data)).join('');
