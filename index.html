@@ -707,7 +707,7 @@
 
    TAB 1 — "Weekly" (column order matters):
      week_starting | meta_spend | meta_clicks | new_patreon_subs |
-     spotify_listeners | patreon_total_subs | patreon_mrr |
+     monthly_listens | patreon_total_subs | patreon_mrr |
      ig_followers | fb_followers | tiktok_followers | notes
 
    TAB 2 — "Campaigns" (column order matters):
@@ -802,31 +802,6 @@ const CONFIG = {
   },
 };
 
-/* DEMO DATA */
-const DEMO_WEEKLY = `week_starting,meta_spend,meta_clicks,new_patreon_subs,paid_cancellations,spotify_listeners,patreon_total_subs,patreon_mrr,ig_followers,fb_followers,tiktok_followers,notes
-2026-02-23,180,3200,11,4,8200,677,3859,4120,2850,1240,Pre-S2 hype campaign launch
-2026-03-02,210,3850,10,5,8450,683,3931,4180,2870,1280,Sam Riegel guest episode dropped
-2026-03-09,225,4100,9,5,8920,687,3971,4240,2895,1340,Sam Riegel ep continues
-2026-03-16,235,4350,11,7,9180,691,4014,4290,2910,1395,Cancellations starting to creep
-2026-03-23,240,4520,10,8,9410,693,4054,4360,2935,1450,Honey Heist retargeting kicked in
-2026-03-30,245,4680,12,9,9680,696,4082,4420,2960,1510,
-2026-04-06,243,4780,11,9,9920,698,4109,4485,2985,1580,Henley Reel started outperforming
-2026-04-13,248,4920,12,10,10250,700,4142,4548,3015,1650,
-2026-04-20,242,4810,10,9,10480,701,4179,4595,3030,1715,Fingers Cant Use Knives launched
-2026-04-27,240,4950,10,9,10720,702,4227,4632,3040,1790,Net growth slowing — cancellations rising
-2026-05-04,238,5020,11,8,10980,705,4247,4685,3055,1860,New episode arc kickoff
-2026-05-11,245,5180,13,7,11240,711,4294,4742,3068,1935,Strong engagement on Patreon Reel ad`;
-
-const DEMO_CAMPAIGNS = `name,platform,status,start_date,end_date,spend,primary_result,result_label,secondary_metric
-Henley Reel S2,Spotify,live,2026-04-06,,280.76,12236,clicks,2p / click
-Fingers Can't Use Knives,Instagram,live,2026-04-20,,117.87,2282,profile visits,5p / visit
-Honey Heist retargeting,Patreon,live,2026-03-23,,90.34,1725,clicks,5p / click
-Sporestime Continuum,Patreon,live,2026-02-23,,176.63,2284,clicks,8p / click
-Sam Riegel pic,Spotify,live,2026-03-02,,76.92,1986,clicks,4p / click
-Don't Mess With a Wizard's Beard,Instagram,live,2026-03-30,,66.74,589,profile visits,11p / visit
-Sam Riegel — Tower of Terror,Patreon,ended,2026-03-02,2026-04-13,18.82,272,clicks,7p / click
-Episode Reaction 3,Instagram,paused,2026-04-13,,72.49,428,profile visits,17p / visit`;
-
 let state = { view: 'weekly', weekly: [], campaigns: [] };
 
 /* CSV PARSING */
@@ -875,6 +850,18 @@ function fmt(value, format) {
   if (format === 'percent') return value.toFixed(1) + '%';
   return value.toString();
 }
+
+/* Find the latest non-null value for a stock metric, walking backwards
+   through the data. Returns { value, index } or { value: null, index: -1 }. */
+function latestValue(data, key) {
+  for (let i = data.length - 1; i >= 0; i--) {
+    const v = data[i][key];
+    if (v !== null && v !== undefined && !isNaN(v)) {
+      return { value: v, index: i };
+    }
+  }
+  return { value: null, index: -1 };
+}
 function fmtDelta(curr, prev) {
   if (curr === null || prev === null || prev === 0) return { text: '—', cls: 'flat' };
   const diff = curr - prev;
@@ -906,7 +893,7 @@ function fmtDateRange(start, end) {
 /* AGGREGATION */
 function aggregateMonthly(weekly) {
   const additive = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations'];
-  const stock = ['spotify_listeners', 'patreon_total_subs', 'patreon_mrr',
+  const stock = ['monthly_listens', 'patreon_total_subs', 'patreon_mrr',
                  'ig_followers', 'fb_followers', 'tiktok_followers'];
   const buckets = {};
   for (const row of weekly) {
@@ -1217,14 +1204,23 @@ function renderMoneyKpis() {
   const prev = data.length > 1 ? data[data.length - 2] : null;
   const periodLabel = state.view === 'weekly' ? 'this week' : 'this month';
 
-  const mrr = latest.patreon_mrr;
-  const mrrDelta = prev ? fmtDelta(mrr, prev.patreon_mrr) : null;
+  // Stock metrics: walk back to last non-null value
+  const mrrRes = latestValue(data, 'patreon_mrr');
+  const mrr = mrrRes.value;
+  // For delta, find the value BEFORE the last-known one
+  let mrrDelta = null;
+  if (mrrRes.index > 0) {
+    const earlier = latestValue(data.slice(0, mrrRes.index), 'patreon_mrr');
+    if (earlier.value !== null) mrrDelta = fmtDelta(mrr, earlier.value);
+  }
 
+  const totalSubsRes = latestValue(data, 'patreon_total_subs');
+
+  // Flow metrics: this period's value only (don't carry over)
   const newSubs = latest.new_patreon_subs;
-  const newSubsDelta = prev ? fmtDelta(newSubs, prev.new_patreon_subs) : null;
+  const newSubsDelta = (prev && prev.new_patreon_subs !== null) ? fmtDelta(newSubs, prev.new_patreon_subs) : null;
 
   const cancels = latest.paid_cancellations;
-  // For cancellations, MORE is BAD — invert the colour like cost-per-sub
   let cancelsDelta = null;
   if (cancels !== null && prev && prev.paid_cancellations !== null) {
     const raw = fmtDelta(cancels, prev.paid_cancellations);
@@ -1234,7 +1230,7 @@ function renderMoneyKpis() {
     };
   }
 
-  // Net growth = new subs - cancellations
+  // Net growth only valid when both numbers exist
   const netGrowth = (newSubs !== null && cancels !== null) ? newSubs - cancels : null;
 
   const cps = costPerNewSub(latest);
@@ -1250,9 +1246,9 @@ function renderMoneyKpis() {
 
   document.getElementById('money-kpis').innerHTML = [
     renderKpiTile('Patreon MRR', fmt(mrr, 'currency'), mrrDelta,
-      `Total paid subs: ${fmt(latest.patreon_total_subs, 'number')}`),
+      totalSubsRes.value !== null ? `Total paid subs: ${fmt(totalSubsRes.value, 'number')}` : 'Awaiting Patreon snapshot'),
     renderKpiTile(`New subs ${periodLabel}`, fmt(newSubs, 'number'), newSubsDelta,
-      `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}`),
+      latest.meta_spend !== null ? `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}` : 'Awaiting weekly data'),
     renderCancellationsTile(cancels, cancelsDelta, netGrowth),
     renderCostPerSubTile(cps, cpsDelta),
   ].join('');
@@ -1330,16 +1326,25 @@ function renderAudienceKpis() {
       '<div class="empty-state" style="grid-column:1/-1">No data yet</div>';
     return;
   }
-  const latest = data[data.length - 1];
-  const prev = data.length > 1 ? data[data.length - 2] : null;
+
+  // Each metric: latest known value + delta vs previous known value
+  function kpiFor(key, label) {
+    const cur = latestValue(data, key);
+    if (cur.value === null) {
+      return renderKpiTile(label, '—', null, 'Awaiting data');
+    }
+    let delta = null;
+    if (cur.index > 0) {
+      const earlier = latestValue(data.slice(0, cur.index), key);
+      if (earlier.value !== null) delta = fmtDelta(cur.value, earlier.value);
+    }
+    return renderKpiTile(label, fmt(cur.value, 'number'), delta);
+  }
 
   document.getElementById('audience-kpis').innerHTML = [
-    renderKpiTile('Spotify listeners', fmt(latest.spotify_listeners, 'number'),
-      prev ? fmtDelta(latest.spotify_listeners, prev.spotify_listeners) : null),
-    renderKpiTile('Instagram followers', fmt(latest.ig_followers, 'number'),
-      prev ? fmtDelta(latest.ig_followers, prev.ig_followers) : null),
-    renderKpiTile('TikTok followers', fmt(latest.tiktok_followers, 'number'),
-      prev ? fmtDelta(latest.tiktok_followers, prev.tiktok_followers) : null),
+    kpiFor('monthly_listens', 'Monthly listens'),
+    kpiFor('ig_followers', 'Instagram followers'),
+    kpiFor('tiktok_followers', 'TikTok followers'),
   ].join('');
 }
 
@@ -1416,7 +1421,7 @@ function renderMoneyCharts() {
 function renderAudienceCharts() {
   const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
   const metrics = [
-    { key: 'spotify_listeners', label: 'Spotify listeners', format: 'number' },
+    { key: 'monthly_listens', label: 'Monthly listens', format: 'number' },
     { key: 'ig_followers',      label: 'Instagram',         format: 'number' },
     { key: 'tiktok_followers',  label: 'TikTok',            format: 'number' },
     { key: 'fb_followers',      label: 'Facebook',          format: 'number' },
@@ -1493,7 +1498,7 @@ function renderTable() {
     { key: 'patreon_total_subs',  label: 'Total subs',  format: 'number' },
     { key: 'new_patreon_subs',    label: 'New subs',    format: 'number' },
     { key: 'paid_cancellations',  label: 'Cancels',     format: 'number' },
-    { key: 'spotify_listeners',   label: 'Spotify',     format: 'number' },
+    { key: 'monthly_listens',   label: 'Listens',     format: 'number' },
     { key: 'ig_followers',        label: 'IG',          format: 'number' },
     { key: 'tiktok_followers',    label: 'TikTok',      format: 'number' },
     { key: 'fb_followers',        label: 'FB',          format: 'number' },
@@ -1562,43 +1567,37 @@ async function fetchCSV(url) {
 }
 
 async function loadData() {
-  let weeklyCsv, campaignsCsv;
-  let usingDemo = false;
+  let weeklyCsv = '', campaignsCsv = '';
   const errors = [];
 
   if (CONFIG.WEEKLY_CSV_URL) {
     try { weeklyCsv = await fetchCSV(CONFIG.WEEKLY_CSV_URL); }
-    catch (e) { errors.push('Weekly tab: ' + e.message); weeklyCsv = DEMO_WEEKLY; usingDemo = true; }
-  } else { weeklyCsv = DEMO_WEEKLY; usingDemo = true; }
+    catch (e) { errors.push('Weekly tab: ' + e.message); }
+  } else {
+    errors.push('Weekly tab: CONFIG.WEEKLY_CSV_URL is not set');
+  }
 
   if (CONFIG.CAMPAIGNS_CSV_URL) {
     try { campaignsCsv = await fetchCSV(CONFIG.CAMPAIGNS_CSV_URL); }
-    catch (e) { errors.push('Campaigns tab: ' + e.message); campaignsCsv = DEMO_CAMPAIGNS; usingDemo = true; }
-  } else { campaignsCsv = DEMO_CAMPAIGNS; usingDemo = true; }
+    catch (e) { errors.push('Campaigns tab: ' + e.message); }
+  } else {
+    errors.push('Campaigns tab: CONFIG.CAMPAIGNS_CSV_URL is not set');
+  }
 
   const weeklyNumeric = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations',
-    'spotify_listeners', 'patreon_total_subs', 'patreon_mrr',
+    'monthly_listens', 'patreon_total_subs', 'patreon_mrr',
     'ig_followers', 'fb_followers', 'tiktok_followers'];
-  state.weekly = rowsToObjects(parseCSV(weeklyCsv), weeklyNumeric).data
+  state.weekly = weeklyCsv ? rowsToObjects(parseCSV(weeklyCsv), weeklyNumeric).data
     .filter(r => r.week_starting)
-    .sort((a, b) => a.week_starting.localeCompare(b.week_starting));
+    .sort((a, b) => a.week_starting.localeCompare(b.week_starting)) : [];
 
   const campaignNumeric = ['spend', 'primary_result'];
-  state.campaigns = rowsToObjects(parseCSV(campaignsCsv), campaignNumeric).data
-    .filter(r => r.name);
+  state.campaigns = campaignsCsv ? rowsToObjects(parseCSV(campaignsCsv), campaignNumeric).data
+    .filter(r => r.name) : [];
 
   if (errors.length > 0) {
     document.querySelector('.wrap').insertAdjacentHTML('afterbegin', `
-      <div class="error">Some data couldn't load: ${errors.join('; ')}. Showing demo data for affected sections.</div>
-    `);
-  }
-  if (usingDemo) {
-    document.querySelector('.wrap').insertAdjacentHTML('afterbegin', `
-      <div style="background:var(--paper-2); border:1.5px dashed var(--accent); padding:14px 18px; margin-bottom:24px; font-size:13px; color:var(--ink)">
-        <strong style="font-family:var(--display); font-size:15px; color:var(--accent)">Demo data</strong> —
-        showing example numbers. Set <code style="background:var(--card); padding:1px 4px">CONFIG.WEEKLY_CSV_URL</code>
-        and <code style="background:var(--card); padding:1px 4px">CONFIG.CAMPAIGNS_CSV_URL</code> to connect.
-      </div>
+      <div class="error">Couldn't load data: ${errors.join('; ')}. Check that the Google Sheet is published to web and the URLs in CONFIG are correct.</div>
     `);
   }
   if (state.weekly.length > 0) {
