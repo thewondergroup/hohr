@@ -364,6 +364,10 @@
   .ltv-pill.bad  { color: var(--bad);  background: var(--bad-bg);  }
   .ltv-pill.flat { color: var(--muted); background: var(--paper-2); }
 
+  .kpi-context-muted {
+    font-size: 11px; color: var(--muted); font-style: italic;
+  }
+
   /* Card variant of the KPI grid — used on the Overview TL;DR row.
      Each tile becomes its own rounded card with an accent stripe + drop shadow,
      and they sit on the page as independent objects rather than a uniform block. */
@@ -518,6 +522,87 @@
     border: 1.5px solid var(--ink);
     padding: 20px 22px;
   }
+
+  /* Earnings panel — Patreon revenue breakdown from PatreonHistory */
+  .earnings-card { /* uses tier-mix-card baseline */ }
+  .earnings-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px; margin: 16px 0 20px 0;
+  }
+  @media (max-width: 540px) { .earnings-stats { grid-template-columns: 1fr; } }
+  .earnings-stat {
+    padding: 14px 16px;
+    background: var(--paper-2);
+    border-radius: 6px;
+    border-left: 3px solid var(--section-color, var(--accent));
+  }
+  .earnings-stat .label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .earnings-stat .value {
+    font-family: var(--display);
+    font-size: 24px; font-weight: 600; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .earnings-stat .sub {
+    font-size: 11px; color: var(--muted); margin-top: 4px;
+  }
+  .earnings-bars {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .earnings-bar-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 110px;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+  }
+  .earnings-bar-month {
+    font-weight: 600; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .earnings-bar-track {
+    position: relative;
+    height: 18px; background: var(--paper-2);
+    border-radius: 3px; overflow: hidden;
+  }
+  .earnings-bar-gross {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: color-mix(in srgb, var(--section-color, var(--accent)) 35%, transparent);
+  }
+  .earnings-bar-net {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--section-color, var(--accent));
+  }
+  .earnings-bar-values {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    font-size: 12px;
+  }
+  .earnings-bar-values .net { font-weight: 700; }
+  .earnings-bar-values .gross { color: var(--muted); font-size: 11px; }
+
+  .earnings-fee-breakdown {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: var(--paper-2);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .earnings-fee-breakdown strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
   .tier-mix-header {
     display: flex;
     align-items: baseline;
@@ -1129,6 +1214,7 @@
       <div id="value-strip" class="value-strip"></div>
       <div class="kpi-grid cols-4" id="money-kpis"></div>
       <div class="charts" id="money-charts" style="margin-top: 16px"></div>
+      <div id="earnings-panel-container" style="margin-top: 16px"></div>
       <div id="tier-mix-container" style="margin-top: 16px"></div>
       <div id="growth-history-container" style="margin-top: 16px"></div>
     </section>
@@ -1716,6 +1802,13 @@ function yoyPill(currentValue, priorValue, opts) {
   return `<span class="yoy-pill ${cls}">${sign}${pctText}% vs ${opts.priorLabel || 'last year'}</span>`;
 }
 
+// Look up the PatreonHistory row for a given month string ('YYYY-MM'). Returns null
+// if not found. Used by Overview tiles and Patreon tab renderers.
+function patreonMonth(monthStr) {
+  if (!monthStr) return null;
+  return (state.patreonHistory || []).find(r => r.month === monthStr) || null;
+}
+
 function fmtWeekLabel(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr + 'T00:00:00');
@@ -1946,35 +2039,71 @@ function renderReadTldr() {
   );
 
   // 2. Patreon MRR
-  const mrrRes = latestValue(visible, 'patreon_mrr');
+  // Prefer PatreonHistory's mrr_end for the focused month; fall back to the Weekly
+  // sheet's patreon_mrr snapshot for backwards-compat where PatreonHistory is sparse.
+  const ph = state.view === 'monthly' ? patreonMonth(cur.month) : null;
+  let mrrValue = ph && ph.mrr_end !== null && ph.mrr_end !== undefined ? ph.mrr_end : null;
+  if (mrrValue === null) {
+    const mrrRes = latestValue(visible, 'patreon_mrr');
+    mrrValue = mrrRes.value;
+  }
+  // MoM delta: compare against the prior period's MRR (whichever source has it)
   let mrrDelta = null;
-  if (mrrRes.index > 0) {
-    const earlier = latestValue(visible.slice(0, mrrRes.index), 'patreon_mrr');
-    if (earlier.value !== null) mrrDelta = fmtDelta(mrrRes.value, earlier.value);
+  if (mrrValue !== null && idx > 0) {
+    const prevRow = data[idx - 1];
+    const prevPh = state.view === 'monthly' ? patreonMonth(prevRow.month) : null;
+    const prevMrr = prevPh && prevPh.mrr_end !== null ? prevPh.mrr_end : prevRow.patreon_mrr;
+    if (prevMrr !== null && prevMrr !== undefined) {
+      mrrDelta = fmtDelta(mrrValue, prevMrr);
+    }
   }
   const mrrTile = renderKpiTile(
     'Patreon MRR',
-    mrrRes.value !== null ? fmt(mrrRes.value, 'currency') : '—',
+    mrrValue !== null ? fmt(mrrValue, 'currency') : '—',
     mrrDelta,
-    mrrRes.value !== null ? 'Monthly recurring revenue' : 'Awaiting Patreon snapshot',
+    mrrValue !== null ? 'Monthly recurring revenue' : 'Awaiting Patreon snapshot',
     'patreon'
   );
 
-  // 3. Net paid sub growth (new subs - cancellations) for the current period
-  const ns = cur.new_patreon_subs, ca = cur.paid_cancellations;
+  // 3. Net paid sub growth — prefer PatreonHistory's monthly joiners/cancellations.
+  // Falls back to Weekly's new_patreon_subs / paid_cancellations for backwards-compat.
+  // Three states:
+  //   (a) Both joiners + cancellations known → show net "+X"
+  //   (b) Only joiners known → show gross "+X joined" with caveat
+  //   (c) Nothing known → "—"
   let netSubsTile;
-  if (ns !== null && ca !== null) {
-    const net = ns - ca;
+  let phJoiners = ph && ph.new_paid_joiners !== null && ph.new_paid_joiners !== undefined ? ph.new_paid_joiners : null;
+  let phCancels = ph && ph.paid_cancellations !== null && ph.paid_cancellations !== undefined ? ph.paid_cancellations : null;
+  // Backwards compatibility: if PatreonHistory has nothing but the Weekly sheet does, use Weekly
+  if (phJoiners === null && cur.new_patreon_subs !== null && cur.new_patreon_subs !== undefined) {
+    phJoiners = cur.new_patreon_subs;
+  }
+  if (phCancels === null && cur.paid_cancellations !== null && cur.paid_cancellations !== undefined) {
+    phCancels = cur.paid_cancellations;
+  }
+  if (phJoiners !== null && phCancels !== null) {
+    // (a) full data
+    const net = phJoiners - phCancels;
     const cls = net > 0 ? 'good' : net < 0 ? 'bad' : 'flat';
     const sign = net > 0 ? '+' : '';
     netSubsTile = renderKpiTile(
       'Net paid growth',
       `${sign}${net}`,
       null,
-      `<span class="ltv-pill ${cls}">${ns} joined · ${ca} left</span>`,
+      `<span class="ltv-pill ${cls}">${phJoiners} joined · ${phCancels} left</span>`,
+      'patreon'
+    );
+  } else if (phJoiners !== null) {
+    // (b) only joiners
+    netSubsTile = renderKpiTile(
+      'New paid joiners',
+      `+${phJoiners}`,
+      null,
+      '<span class="kpi-context-muted">Cancellations not tracked this month</span>',
       'patreon'
     );
   } else {
+    // (c) nothing
     netSubsTile = renderKpiTile('Net paid growth', '—', null, 'Awaiting Patreon data', 'patreon');
   }
 
@@ -2001,11 +2130,12 @@ function renderReadTldr() {
     'listens'
   );
 
-  // 5. Cost per new paid sub — meta_spend / new_patreon_subs for this period.
-  // Suppressed on in-progress periods (denominator hasn't settled).
-  // Suppressed if either input is missing.
+  // 5. Cost per new paid sub — meta_spend / new_paid_joiners for this period.
+  // Prefer PatreonHistory's monthly joiner count over the Weekly sheet's running sum
+  // (more authoritative; PatreonHistory comes from Patreon's own reports).
+  // Suppressed on in-progress periods (denominator hasn't settled) and when missing data.
   const cpaSpend = cur.meta_spend;
-  const cpaSubs = cur.new_patreon_subs;
+  let cpaSubs = phJoiners; // From PatreonHistory above; falls back to Weekly already.
   let cpaTile;
   if (!isInProgress && cpaSpend !== null && cpaSpend > 0 && cpaSubs !== null && cpaSubs > 0) {
     const cpa = cpaSpend / cpaSubs;
@@ -2021,23 +2151,49 @@ function renderReadTldr() {
     );
   } else if (isInProgress) {
     cpaTile = renderKpiTile('Cost per new paid sub', '—', null, partialSuffix, 'social');
+  } else if (cpaSpend === null || cpaSpend === 0) {
+    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, 'No ad spend this month', 'social');
   } else {
-    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, 'Awaiting full month data', 'social');
+    cpaTile = renderKpiTile('Cost per new paid sub', '—', null, 'Awaiting joiner data', 'social');
   }
 
-  // 6. Lifetime Patreon revenue — cumulative since launch.
-  // Pending Patreon Earnings export. Shows '—' until CONFIG.LIFETIME_PATREON_REVENUE is set.
-  const lifetimeRev = CONFIG.LIFETIME_PATREON_REVENUE;
-  const lifetimeContext = lifetimeRev !== null
-    ? `Since launch · Oct 2022${CONFIG.LIFETIME_PATREON_REVENUE_AS_OF ? '<br>As of ' + fmtMonthLabel(CONFIG.LIFETIME_PATREON_REVENUE_AS_OF) : ''}`
-    : 'Awaiting Patreon Earnings export';
-  const lifetimeRevTile = renderKpiTile(
-    'Lifetime Patreon revenue',
-    lifetimeRev !== null ? fmt(lifetimeRev, 'currency') : '—',
-    null,
-    lifetimeContext,
-    'patreon'
-  );
+  // 6. Patreon earnings — sum of net_earnings from PatreonHistory.
+  // If we have earnings data covering the full launch period (Oct 2022 → present),
+  // this is a true "lifetime" number. If we only have recent months, the tile
+  // labels itself accordingly so we're not misleading the reader.
+  const earningsMonths = (state.patreonHistory || [])
+    .filter(r => r.net_earnings !== null && r.net_earnings !== undefined);
+  let earningsTile;
+  if (earningsMonths.length === 0) {
+    earningsTile = renderKpiTile(
+      'Lifetime Patreon revenue', '—', null,
+      'Awaiting Patreon Earnings export',
+      'patreon'
+    );
+  } else {
+    const totalNet = earningsMonths.reduce((s, r) => s + r.net_earnings, 0);
+    const firstMonth = earningsMonths[0].month;  // already sorted asc
+    const lastMonth = earningsMonths[earningsMonths.length - 1].month;
+    // Heuristic: if the first earnings month is within 3 months of launch (Oct 2022),
+    // call it "Lifetime". Otherwise label by coverage range.
+    const launchMonth = '2022-10';
+    const isLifetime = firstMonth <= '2023-01';
+    const label = isLifetime
+      ? 'Lifetime Patreon revenue'
+      : `Patreon revenue (${earningsMonths.length} mo)`;
+    const context = isLifetime
+      ? `Since launch · Oct 2022<br>Net of all fees`
+      : `${fmtMonthLabel(firstMonth + '-01')} → ${fmtMonthLabel(lastMonth + '-01')}<br>Net of all fees`;
+    earningsTile = renderKpiTile(
+      label,
+      fmt(totalNet, 'currency'),
+      null,
+      context,
+      'patreon'
+    );
+  }
+
+  const lifetimeRevTile = earningsTile;
 
   // Layout: Row 1 (audience) — Listens this period, Lifetime listens, MRR.
   //         Row 2 (monetisation) — Net growth, Cost per sub, Lifetime Patreon revenue.
@@ -2238,6 +2394,91 @@ function renderGrowthHistory() {
       document.getElementById('tooltip').classList.remove('visible');
     });
   });
+}
+
+/* RENDER: PATREON EARNINGS PANEL
+ * Shows monthly gross + net earnings from PatreonHistory, plus a fee-breakdown context.
+ * Bars: outer (lighter) shows gross; inner (full colour) shows net. The gap between
+ * the bars visualises Patreon's fee take.
+ * Only renders if we have at least 1 month of earnings data; silently hidden otherwise. */
+function renderEarnings() {
+  const c = document.getElementById('earnings-panel-container');
+  if (!c) return;
+  const months = (state.patreonHistory || [])
+    .filter(r => r.net_earnings !== null && r.net_earnings !== undefined
+              && r.gross_earnings !== null && r.gross_earnings !== undefined);
+  if (months.length === 0) { c.innerHTML = ''; return; }
+
+  const totalGross = months.reduce((s, r) => s + r.gross_earnings, 0);
+  const totalNet = months.reduce((s, r) => s + r.net_earnings, 0);
+  const totalFees = totalGross - totalNet;
+  const feeRatePct = (totalFees / totalGross) * 100;
+
+  const firstMonth = months[0].month;
+  const lastMonth = months[months.length - 1].month;
+  const periodLabel = months.length === 1
+    ? fmtMonthLabel(firstMonth + '-01')
+    : `${fmtMonthLabel(firstMonth + '-01')} → ${fmtMonthLabel(lastMonth + '-01')}`;
+
+  // Bars: scale relative to max gross so the comparison is honest
+  const maxGross = Math.max(...months.map(r => r.gross_earnings));
+  const bars = months.map(r => {
+    const grossPct = (r.gross_earnings / maxGross) * 100;
+    const netPct = (r.net_earnings / maxGross) * 100;
+    const [y, m] = r.month.split('-');
+    const monthLabel = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m) - 1] + ' ' + y.slice(2);
+    return `
+      <div class="earnings-bar-row">
+        <div class="earnings-bar-month">${monthLabel}</div>
+        <div class="earnings-bar-track" title="${monthLabel}: gross £${Math.round(r.gross_earnings)} / net £${Math.round(r.net_earnings)}">
+          <div class="earnings-bar-gross" style="width:${grossPct.toFixed(1)}%"></div>
+          <div class="earnings-bar-net" style="width:${netPct.toFixed(1)}%"></div>
+        </div>
+        <div class="earnings-bar-values">
+          <div class="net">£${Math.round(r.net_earnings).toLocaleString('en-GB')}</div>
+          <div class="gross">gross £${Math.round(r.gross_earnings).toLocaleString('en-GB')}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Approximate fee breakdown — these percentages are derived from the 6 months
+  // of data we have and may drift slightly month to month.
+  const feeBreakdown = `
+    <div class="earnings-fee-breakdown">
+      Of every £1 gross, HOHR keeps about <strong>£${((totalNet/totalGross)).toFixed(2)}</strong>.
+      Fees average <strong>${feeRatePct.toFixed(1)}%</strong>:
+      ~8% Patreon platform fee · ~8% payment processing · ~1% currency exchange · ~3% Apple's iOS app fee (on iOS subs only).
+    </div>
+  `;
+
+  c.innerHTML = `
+    <div class="tier-mix-card earnings-card">
+      <div class="tier-mix-header">
+        <h3>Patreon earnings</h3>
+        <div class="meta">${periodLabel} · ${months.length} ${months.length === 1 ? 'month' : 'months'}</div>
+      </div>
+      <div class="earnings-stats">
+        <div class="earnings-stat">
+          <div class="label">Total gross</div>
+          <div class="value">${fmt(totalGross, 'currency')}</div>
+          <div class="sub">Before any fees</div>
+        </div>
+        <div class="earnings-stat">
+          <div class="label">Total fees</div>
+          <div class="value">${fmt(totalFees, 'currency')}</div>
+          <div class="sub">${feeRatePct.toFixed(1)}% of gross</div>
+        </div>
+        <div class="earnings-stat">
+          <div class="label">Total net</div>
+          <div class="value">${fmt(totalNet, 'currency')}</div>
+          <div class="sub">What HOHR receives</div>
+        </div>
+      </div>
+      <div class="earnings-bars">${bars}</div>
+      ${feeBreakdown}
+    </div>
+  `;
 }
 
 /* RENDER: TIER MIX */
@@ -3072,6 +3313,7 @@ function renderAll() {
       renderValueStrip();
       renderMoneyKpis();
       renderMoneyCharts();
+      renderEarnings();
       renderTierMix();
       renderGrowthHistory();
       break;
