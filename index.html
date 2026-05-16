@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Hell or High Rollers — Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --ink:       #1a1410;
+    --paper:    #fafaf7;
+    --paper-2:  #f3f1ea;
+    --card:     #ffffff;
+    --rule:     #d8d3c4;
+    --rule-dim: #ebe7dc;
+    --accent:    #b85c00;
+    --accent-2:  #934800;
+    --accent-bg: rgba(184, 92, 0, 0.08);
+    --chart:     #3b82d9;
+    --chart-2:   #2563c4;
+    --chart-bg:  rgba(59, 130, 217, 0.08);
+    --muted:    #6b6259;
+    --muted-2:  #9a9189;
+    --good:     #137a3e;
+    --good-bg:  rgba(19, 122, 62, 0.12);
+    --bad:      #b8281f;
+    --bad-bg:   rgba(184, 40, 31, 0.10);
+    --display: 'Fraunces', Georgia, serif;
+    --body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--paper); color: var(--ink); font-family: var(--body);
+    font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  body {
+    background-image:
+      radial-gradient(at 15% 5%, rgba(184, 92, 0, 0.022) 0%, transparent 50%),
+      radial-gradient(at 90% 95%, rgba(184, 92, 0, 0.018) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 28px 80px; }
+
+  /* MASTHEAD */
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 18px; margin-bottom: 24px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap;
+  }
+  .masthead-left h1 {
+    font-family: var(--display); font-weight: 600;
+    font-size: 42px; line-height: 1; letter-spacing: -0.5px; color: var(--ink);
+  }
+  .masthead-left h1 .amp {
+    color: var(--accent); font-style: italic; font-weight: 500;
+    font-size: 0.85em; margin: 0 0.04em;
+  }
+  .masthead-left .sub {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-top: 8px;
+  }
+  .masthead-right {
+    text-align: right; font-size: 11px; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  }
+  .masthead-right .last-updated {
+    color: var(--ink); font-weight: 600; font-size: 13px;
+    letter-spacing: 0.02em; text-transform: none; margin-top: 2px;
+  }
+
+  /* MONTHLY READ */
+  .monthly-read {
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    border-left: 4px solid var(--accent);
+    padding: 22px 26px;
+    margin-bottom: 28px;
+  }
+  .monthly-read-meta {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+  }
+  .monthly-read h2 {
+    font-family: var(--display); font-weight: 600; font-size: 26px;
+    color: var(--ink); letter-spacing: -0.3px; margin-bottom: 12px;
+  }
+  .monthly-read p {
+    font-size: 15px; line-height: 1.6; color: var(--ink); margin-bottom: 8px;
+  }
+  .monthly-read p:last-child { margin-bottom: 0; }
+  .monthly-read .hl { background: rgba(184, 92, 0, 0.15); padding: 1px 4px; }
+
+  /* VIEW TOGGLE */
+  .view-toggle {
+    display: inline-flex; border: 1.5px solid var(--ink);
+    background: var(--card); margin-bottom: 24px;
+  }
+  .view-toggle button {
+    background: transparent; border: none; padding: 9px 20px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .view-toggle button + button { border-left: 1.5px solid var(--ink); }
+  .view-toggle button.active { background: var(--ink); color: var(--card); }
+  .view-toggle button:hover:not(.active) { background: var(--paper-2); }
+
+  /* SECTION HEADERS */
+  .section { margin-bottom: 44px; }
+  .section-header {
+    margin-bottom: 16px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-header .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 4px;
+  }
+  .section-header h2 {
+    font-family: var(--display); font-weight: 600; font-size: 30px;
+    color: var(--ink); letter-spacing: -0.4px; margin-bottom: 6px;
+  }
+  .section-header p {
+    font-size: 14px; color: var(--muted); line-height: 1.5; max-width: 56ch;
+  }
+
+  /* KPI TILES */
+  .kpi-grid {
+    display: grid; gap: 0; border: 1.5px solid var(--ink);
+    background: var(--card); margin-bottom: 16px;
+  }
+  .kpi-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .kpi-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .kpi { padding: 20px 22px; border-right: 1px solid var(--rule); position: relative; }
+  .kpi:last-child { border-right: none; }
+  .kpi-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-weight: 700; font-size: 36px; line-height: 1; color: var(--ink);
+    letter-spacing: -1.2px; font-variant-numeric: tabular-nums;
+  }
+  .kpi-delta {
+    margin-top: 12px; font-size: 12px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px 3px 7px; border-radius: 2px;
+  }
+  .kpi-delta.up   { color: var(--good); background: var(--good-bg); }
+  .kpi-delta.down { color: var(--bad);  background: var(--bad-bg);  }
+  .kpi-delta.flat { color: var(--muted); background: transparent; padding-left: 0; }
+  .kpi-delta::before { content: ""; display: inline-block; width: 0; height: 0; }
+  .kpi-delta.up::before {
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-bottom: 6px solid var(--good);
+  }
+  .kpi-delta.down::before {
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 6px solid var(--bad);
+  }
+  .kpi-delta.flat::before { width: 8px; height: 1px; background: var(--muted); }
+  .kpi-context {
+    font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.4;
+  }
+  .ltv-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .ltv-pill.good { color: var(--good); background: var(--good-bg); }
+  .ltv-pill.bad  { color: var(--bad);  background: var(--bad-bg);  }
+
+  /* TIER MIX */
+  .tier-mix-card {
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    padding: 20px 22px;
+  }
+  .tier-mix-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tier-mix-header h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 19px;
+    color: var(--ink);
+    letter-spacing: -0.2px;
+  }
+  .tier-mix-header .meta {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tier-mix-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .tier-bar-block { display: flex; flex-direction: column; gap: 16px; }
+  .tier-bar-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .tier-bar {
+    display: flex;
+    height: 32px;
+    border: 1px solid var(--ink);
+    overflow: hidden;
+    font-variant-numeric: tabular-nums;
+  }
+  .tier-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .tier-segment.t1 { background: #9bbde0; color: #1a1410; }
+  .tier-segment.t2 { background: #4a7bb0; }
+  .tier-segment.t3 { background: #1e3a5f; }
+  .tier-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .tier-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tier-swatch {
+    width: 10px; height: 10px;
+    border: 1px solid var(--ink);
+  }
+  .tier-swatch.t1 { background: #9bbde0; }
+  .tier-swatch.t2 { background: #4a7bb0; }
+  .tier-swatch.t3 { background: #1e3a5f; }
+  .tier-insight {
+    background: var(--accent-bg);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .tier-insight strong { font-weight: 600; }
+  @media (max-width: 700px) {
+    .tier-mix-grid { grid-template-columns: 1fr; gap: 16px; }
+  }
+
+  /* GROWTH HISTORY CHART */
+  .growth-card {
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    padding: 20px 22px;
+  }
+  .growth-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .growth-header h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 19px;
+    color: var(--ink);
+    letter-spacing: -0.2px;
+  }
+  .growth-header .meta {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .growth-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 18px;
+    line-height: 1.4;
+  }
+  svg.growth-chart {
+    width: 100%;
+    display: block;
+    overflow: visible;
+  }
+  svg.growth-chart .bar {
+    fill: var(--chart);
+    transition: opacity 0.15s;
+  }
+  svg.growth-chart .bar.unpaid {
+    fill: var(--rule);
+  }
+  svg.growth-chart .bar:hover { opacity: 0.7; cursor: pointer; }
+  svg.growth-chart .axis-label {
+    font-size: 10px; font-weight: 500; fill: var(--muted);
+  }
+  svg.growth-chart .grid-line {
+    stroke: var(--rule-dim); stroke-width: 0.5; stroke-dasharray: 2 3;
+  }
+  svg.growth-chart .marker-line {
+    stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 3;
+  }
+  svg.growth-chart .marker-label {
+    font-size: 10px; fill: var(--accent); font-weight: 600;
+  }
+  .growth-legend {
+    display: flex; gap: 16px; margin-top: 12px;
+    font-size: 12px; color: var(--muted);
+  }
+  .growth-legend-item {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .growth-legend-swatch {
+    width: 10px; height: 10px;
+  }
+  .growth-legend-swatch.paid { background: var(--chart); }
+  .growth-legend-swatch.free { background: var(--rule); }
+
+  /* YEAR-OVER-YEAR COMPARISON PANEL */
+  .yoy-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 14px 0 22px;
+  }
+  .yoy-block {
+    background: var(--paper-2);
+    border-left: 3px solid var(--accent);
+    padding: 14px 16px;
+  }
+  .yoy-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .yoy-compare {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .yoy-old, .yoy-new {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .yoy-year {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .yoy-value {
+    font-family: var(--body);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .yoy-old .yoy-value { color: var(--muted); }
+  .yoy-arrow {
+    color: var(--muted-2);
+    font-size: 16px;
+    margin: 0 2px;
+    align-self: flex-end;
+    padding-bottom: 2px;
+  }
+  .yoy-change {
+    margin-left: auto;
+    align-self: flex-end;
+    padding-bottom: 2px;
+  }
+  .yoy-context {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .yoy-context strong { color: var(--ink); font-weight: 600; }
+  @media (max-width: 700px) {
+    .yoy-panel { grid-template-columns: 1fr; gap: 12px; }
+  }
+
+  /* enlarge transparent hit areas on bars */
+  svg.growth-chart .bar-hit { cursor: pointer; }
+  svg.growth-chart .bar-hit:hover ~ .bar { opacity: 0.7; }
+
+  /* CHARTS */
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .charts.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .chart-card { background: var(--card); border: 1.5px solid var(--ink); padding: 18px 20px 14px; }
+  .chart-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 12px; gap: 12px;
+  }
+  .chart-title {
+    font-family: var(--display); font-weight: 600; font-size: 19px;
+    color: var(--ink); letter-spacing: -0.2px;
+  }
+  .chart-meta {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); margin-top: 3px;
+  }
+  .chart-current {
+    font-weight: 700; font-size: 22px; color: var(--chart);
+    line-height: 1; letter-spacing: -0.6px; font-variant-numeric: tabular-nums;
+  }
+  svg.chart { width: 100%; height: 160px; display: block; overflow: visible; }
+  svg.chart .grid-line {
+    stroke: var(--rule-dim); stroke-width: 0.5; stroke-dasharray: 2 3;
+  }
+  svg.chart .axis-label {
+    font-size: 10px; font-weight: 500; fill: var(--muted);
+  }
+  svg.chart .data-line {
+    fill: none; stroke: var(--chart); stroke-width: 1.8;
+    stroke-linejoin: round; stroke-linecap: round;
+  }
+  svg.chart .data-area { fill: var(--chart); opacity: 0.06; }
+  svg.chart .data-point {
+    fill: var(--card); stroke: var(--chart); stroke-width: 1.5;
+  }
+  svg.chart .data-point:hover { fill: var(--chart); cursor: pointer; }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: fixed; background: var(--ink); color: var(--card);
+    padding: 7px 11px; font-size: 12px; font-weight: 500;
+    pointer-events: none; opacity: 0; transition: opacity 0.12s;
+    z-index: 100; white-space: nowrap;
+  }
+  .tooltip.visible { opacity: 1; }
+
+  /* CAMPAIGNS */
+  .campaigns-card {
+    background: var(--card); border: 1.5px solid var(--ink); overflow: hidden;
+  }
+  .campaigns-header {
+    padding: 14px 22px; border-bottom: 1.5px solid var(--ink);
+    background: var(--paper-2);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  }
+  .campaigns-header h3 {
+    font-family: var(--display); font-weight: 600; font-size: 20px;
+    color: var(--ink); letter-spacing: -0.2px;
+  }
+  .campaigns-header .count {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .campaign-row, .campaign-header-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 110px 140px 110px;
+    gap: 14px; padding: 14px 22px; align-items: center;
+  }
+  .campaign-header-row {
+    padding: 11px 22px; background: var(--paper-2);
+    border-bottom: 1px solid var(--rule);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .campaign-header-row > div.right { text-align: right; }
+  .campaign-row {
+    border-bottom: 1px solid var(--rule-dim); font-size: 13px;
+  }
+  .campaign-row:last-child { border-bottom: none; }
+  .campaign-row:hover { background: var(--accent-bg); }
+  .campaign-status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted-2); justify-self: center;
+  }
+  .campaign-status.live   { background: var(--good); }
+  .campaign-status.ended  { background: var(--muted-2); }
+  .campaign-status.paused { background: var(--accent); }
+  .campaign-meta { display: flex; flex-direction: column; gap: 2px; }
+  .campaign-name { font-weight: 600; color: var(--ink); font-size: 14px; }
+  .campaign-dates {
+    font-size: 11px; color: var(--muted); font-weight: 500;
+  }
+  .campaign-cell { font-variant-numeric: tabular-nums; }
+  .campaign-cell .num { font-weight: 600; color: var(--ink); }
+  .campaign-cell .lbl {
+    font-size: 11px; color: var(--muted); margin-top: 1px;
+    font-weight: 500; letter-spacing: 0.02em;
+  }
+  .campaign-cell.right { text-align: right; }
+
+  /* DATA TABLE */
+  .table-card {
+    background: var(--card); border: 1.5px solid var(--ink); overflow: hidden;
+  }
+  .table-card-header {
+    padding: 14px 22px; border-bottom: 1px solid var(--ink);
+    background: var(--paper-2);
+  }
+  .table-card-header h3 {
+    font-family: var(--display); font-weight: 600; font-size: 20px;
+    color: var(--ink); letter-spacing: -0.2px;
+  }
+  .table-scroll { overflow-x: auto; }
+  table.data-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+  }
+  table.data-table th {
+    text-align: right; padding: 11px 14px; background: var(--paper-2);
+    border-bottom: 1.5px solid var(--ink);
+    font-weight: 600; font-size: 11px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink); white-space: nowrap;
+  }
+  table.data-table th:first-child {
+    text-align: left; position: sticky; left: 0;
+    background: var(--paper-2); z-index: 2;
+  }
+  table.data-table td {
+    text-align: right; padding: 10px 14px;
+    border-bottom: 1px solid var(--rule-dim); color: var(--ink); white-space: nowrap;
+  }
+  table.data-table td:first-child {
+    text-align: left; font-weight: 600;
+    position: sticky; left: 0; background: var(--card); z-index: 1;
+  }
+  table.data-table tr:nth-child(even) td { background: var(--paper); }
+  table.data-table tr:nth-child(even) td:first-child { background: var(--paper); }
+  table.data-table tr:hover td, table.data-table tr:hover td:first-child {
+    background: var(--accent-bg);
+  }
+  td.empty { color: var(--muted-2); }
+
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted); font-size: 13px;
+  }
+  .error {
+    background: var(--bad-bg); border: 1.5px solid var(--bad); color: var(--bad);
+    padding: 16px 20px; margin-bottom: 24px; font-size: 13px;
+  }
+
+  /* FOOTER */
+  footer {
+    margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  footer a {
+    color: var(--ink); text-decoration: none;
+    border-bottom: 1px dotted var(--muted);
+  }
+
+  /* d20 flourish */
+  .flourish {
+    display: inline-block; width: 14px; height: 14px;
+    transform: rotate(45deg); background: var(--accent);
+    margin: 0 6px; vertical-align: -2px; position: relative;
+  }
+  .flourish::after {
+    content: "20"; position: absolute; inset: 0;
+    transform: rotate(-45deg); color: var(--card);
+    font-size: 8px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .kpi-grid.cols-4, .kpi-grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
+    .kpi { border-bottom: 1px solid var(--rule); }
+    .kpi:nth-child(odd) { border-right: 1px solid var(--rule); }
+    .kpi:nth-child(even) { border-right: none; }
+    .charts, .charts.cols-3 { grid-template-columns: 1fr; }
+    .masthead-left h1 { font-size: 32px; }
+    .section-header h2 { font-size: 24px; }
+    .campaign-row, .campaign-header-row {
+      grid-template-columns: 24px 1fr 90px; gap: 10px; padding: 12px 16px;
+    }
+    .campaign-row .desktop-only, .campaign-header-row .desktop-only { display: none; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 20px 16px 60px; }
+    .kpi-grid.cols-4, .kpi-grid.cols-3 { grid-template-columns: 1fr; }
+    .kpi { border-right: none !important; }
+    .monthly-read { padding: 18px 20px; }
+    .monthly-read h2 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="masthead-left">
+      <h1>Hell <span class="amp">or</span> High Rollers</h1>
+      <div class="sub">Performance dashboard <span class="flourish"></span> Prepared by The Wonder Agency</div>
+    </div>
+    <div class="masthead-right">
+      <div>Last updated</div>
+      <div class="last-updated" id="last-updated">—</div>
+    </div>
+  </header>
+
+  <div id="monthly-read-container"></div>
+
+  <div class="view-toggle" role="tablist">
+    <button class="active" data-view="weekly" role="tab">Weekly</button>
+    <button data-view="monthly" role="tab">Monthly</button>
+  </div>
+
+  <!-- SECTION 1: THE MONEY -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">Section 01 · The money</div>
+      <h2>Is the maths working?</h2>
+      <p>Patreon revenue, sub growth, and the cost to acquire a new subscriber. The numbers that tell us whether ad spend is paying for itself.</p>
+    </div>
+    <div class="kpi-grid cols-4" id="money-kpis"></div>
+    <div class="charts" id="money-charts" style="margin-top: 16px"></div>
+    <div id="tier-mix-container" style="margin-top: 16px"></div>
+    <div id="growth-history-container" style="margin-top: 16px"></div>
+  </section>
+
+  <!-- SECTION 2: THE AUDIENCE -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">Section 02 · The audience</div>
+      <h2>Is the audience growing?</h2>
+      <p>How many people are listening, following, and engaging across platforms. The top of the funnel — listeners today become Patreon subs tomorrow.</p>
+    </div>
+    <div class="kpi-grid cols-3" id="audience-kpis"></div>
+    <div class="charts" id="audience-charts" style="margin-top: 16px"></div>
+  </section>
+
+  <!-- SECTION 3: WHAT WE RAN -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">Section 03 · What we ran</div>
+      <h2>What's working?</h2>
+      <p>Every active campaign we've run, what it cost, and what it delivered. Live campaigns are highlighted; ended campaigns stay visible so you can see the back catalogue.</p>
+    </div>
+    <div class="campaigns-card" id="campaigns-card"></div>
+  </section>
+
+  <!-- RAW DATA TABLE -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">Raw data</div>
+      <h2>All the numbers</h2>
+      <p>Every metric, every week. Useful for spotting patterns the sections above don't surface.</p>
+    </div>
+    <div class="table-card">
+      <div class="table-card-header"><h3 id="table-title">Weekly entries</h3></div>
+      <div class="table-scroll"><table class="data-table" id="data-table"></table></div>
+    </div>
+  </section>
+
+  <footer>
+    <div>The Wonder Agency <span class="flourish"></span> Hell or High Rollers</div>
+    <div>Data source: <a href="#" id="sheet-link" target="_blank" rel="noopener">Google Sheet</a></div>
+  </footer>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ============================================================
+   CONFIGURATION
+
+   The Google Sheet needs TWO published tabs:
+
+   TAB 1 — "Weekly" (column order matters):
+     week_starting | meta_spend | meta_clicks | new_patreon_subs |
+     spotify_listeners | patreon_total_subs | patreon_mrr |
+     ig_followers | fb_followers | tiktok_followers | notes
+
+   TAB 2 — "Campaigns" (column order matters):
+     name | platform | status | start_date | end_date | spend |
+     primary_result | result_label | secondary_metric
+
+   Publish each tab as its own CSV (File → Share → Publish to web).
+
+   The monthly read at the top is set as MONTHLY_READ below.
+   ============================================================ */
+const CONFIG = {
+  WEEKLY_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=0&single=true&output=csv',
+  CAMPAIGNS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQvLYMx0dCq0b0ertwrYYE6VsdxgZo1RKVW5qezln-W9Ixrzo00peSDlnMYnhfVid6mOs9h_7pmCShH/pub?gid=1314946819&single=true&output=csv',
+  SHEET_EDIT_URL: 'https://docs.google.com/spreadsheets/d/1OMTErHf9rDp7rCfJlEhvc30LZBqQbBheO4yyr7Sr6eM/edit',
+
+  // Lifetime value benchmark — used to contextualise cost-per-sub
+  // Update annually from Patreon export analysis
+  SUB_LTV: 98,
+
+  // Tier mix — updated quarterly from Patreon snapshot
+  TIER_MIX: [
+    { name: '£4 Lust',     subs: 457, mrr: 1828, price: 4 },
+    { name: '£8 Avarice',  subs: 172, mrr: 1376, price: 8 },
+    { name: '£15 Gluttony', subs: 141, mrr: 2115, price: 15 },
+  ],
+
+  // Historical monthly joiners (paid + total) — from Patreon export
+  // Updated quarterly. Total includes free-tier signups.
+  MONTHLY_JOINERS: [
+    { month: '2022-10', paid: 23, total: 23 },
+    { month: '2022-11', paid: 46, total: 47 },
+    { month: '2022-12', paid: 35, total: 36 },
+    { month: '2023-01', paid: 44, total: 44 },
+    { month: '2023-02', paid: 30, total: 31 },
+    { month: '2023-03', paid: 21, total: 21 },
+    { month: '2023-04', paid: 14, total: 14 },
+    { month: '2023-05', paid: 14, total: 14 },
+    { month: '2023-06', paid: 13, total: 14 },
+    { month: '2023-07', paid: 13, total: 13 },
+    { month: '2023-08', paid: 22, total: 22 },
+    { month: '2023-09', paid: 17, total: 18 },
+    { month: '2023-10', paid: 11, total: 18 },
+    { month: '2023-11', paid: 12, total: 59 },
+    { month: '2023-12', paid: 14, total: 19 },
+    { month: '2024-01', paid: 29, total: 39 },
+    { month: '2024-02', paid: 25, total: 29 },
+    { month: '2024-03', paid: 16, total: 26 },
+    { month: '2024-04', paid: 24, total: 39 },
+    { month: '2024-05', paid: 21, total: 27 },
+    { month: '2024-06', paid: 36, total: 51 },
+    { month: '2024-07', paid: 18, total: 26 },
+    { month: '2024-08', paid: 24, total: 37 },
+    { month: '2024-09', paid: 12, total: 26 },
+    { month: '2024-10', paid: 25, total: 32 },
+    { month: '2024-11', paid: 21, total: 31 },
+    { month: '2024-12', paid: 72, total: 103 },
+    { month: '2025-01', paid: 49, total: 75 },
+    { month: '2025-02', paid: 31, total: 47 },
+    { month: '2025-03', paid: 47, total: 76 },
+    { month: '2025-04', paid: 34, total: 54 },
+    { month: '2025-05', paid: 27, total: 42 },
+    { month: '2025-06', paid: 16, total: 41 },
+    { month: '2025-07', paid: 28, total: 50 },
+    { month: '2025-08', paid: 28, total: 47 },
+    { month: '2025-09', paid: 25, total: 43 },
+    { month: '2025-10', paid: 18, total: 43 },
+    { month: '2025-11', paid: 19, total: 37 },
+    { month: '2025-12', paid: 25, total: 59 },
+    { month: '2026-01', paid: 57, total: 110 },
+    { month: '2026-02', paid: 32, total: 66 },
+    { month: '2026-03', paid: 31, total: 63 },
+    { month: '2026-04', paid: 33, total: 108 },
+    { month: '2026-05', paid: 16, total: 51 },
+  ],
+
+  // Milestones to annotate on the historical chart.
+  // Add what you know — HOHR can tell us what the others were.
+  MILESTONES: [
+    { month: '2022-10', label: 'Patreon launch' },
+    { month: '2024-12', label: 'Dec spike' },
+  ],
+
+  MONTHLY_READ: {
+    period: 'May 2026',
+    title: "Acquisition is strong, retention needs a look",
+    paragraphs: [
+      'The ad campaign is doing its job on the top of the funnel — <span class="hl">43 new paid subs in April</span>, consistent with March. The campaign cost £35 per gross new sub against an average lifetime value of £98, so each acquisition is profitable.',
+      'But <span class="hl">cancellations have grown from 20 → 30 → 37</span> across the last three months. Net paid growth in April was only +6. The cancellation reason most often cited is "my financial situation has changed", which fits the macroeconomic picture but doesn\'t make it less of a problem.',
+      'From the cancellation data we can see, <span class="hl">around a third of paid cancellations happen within 90 days of joining</span>. A new-member retention play (welcome content, a 30-day check-in, early access to something exclusive) could meaningfully change net growth. Worth a conversation about what HOHR could do.',
+      'On the upside: Spotify crossed 11,000 listeners, the £15 Gluttony tier continues to punch above its weight (18% of subs, 40% of revenue), and the Henley Reel is still the highest-performing creative. We want 2-3 fresh Reel variants in May to spread the load before fatigue.'
+    ]
+  },
+};
+
+/* DEMO DATA */
+const DEMO_WEEKLY = `week_starting,meta_spend,meta_clicks,new_patreon_subs,paid_cancellations,spotify_listeners,patreon_total_subs,patreon_mrr,ig_followers,fb_followers,tiktok_followers,notes
+2026-02-23,180,3200,11,4,8200,677,3859,4120,2850,1240,Pre-S2 hype campaign launch
+2026-03-02,210,3850,10,5,8450,683,3931,4180,2870,1280,Sam Riegel guest episode dropped
+2026-03-09,225,4100,9,5,8920,687,3971,4240,2895,1340,Sam Riegel ep continues
+2026-03-16,235,4350,11,7,9180,691,4014,4290,2910,1395,Cancellations starting to creep
+2026-03-23,240,4520,10,8,9410,693,4054,4360,2935,1450,Honey Heist retargeting kicked in
+2026-03-30,245,4680,12,9,9680,696,4082,4420,2960,1510,
+2026-04-06,243,4780,11,9,9920,698,4109,4485,2985,1580,Henley Reel started outperforming
+2026-04-13,248,4920,12,10,10250,700,4142,4548,3015,1650,
+2026-04-20,242,4810,10,9,10480,701,4179,4595,3030,1715,Fingers Cant Use Knives launched
+2026-04-27,240,4950,10,9,10720,702,4227,4632,3040,1790,Net growth slowing — cancellations rising
+2026-05-04,238,5020,11,8,10980,705,4247,4685,3055,1860,New episode arc kickoff
+2026-05-11,245,5180,13,7,11240,711,4294,4742,3068,1935,Strong engagement on Patreon Reel ad`;
+
+const DEMO_CAMPAIGNS = `name,platform,status,start_date,end_date,spend,primary_result,result_label,secondary_metric
+Henley Reel S2,Spotify,live,2026-04-06,,280.76,12236,clicks,2p / click
+Fingers Can't Use Knives,Instagram,live,2026-04-20,,117.87,2282,profile visits,5p / visit
+Honey Heist retargeting,Patreon,live,2026-03-23,,90.34,1725,clicks,5p / click
+Sporestime Continuum,Patreon,live,2026-02-23,,176.63,2284,clicks,8p / click
+Sam Riegel pic,Spotify,live,2026-03-02,,76.92,1986,clicks,4p / click
+Don't Mess With a Wizard's Beard,Instagram,live,2026-03-30,,66.74,589,profile visits,11p / visit
+Sam Riegel — Tower of Terror,Patreon,ended,2026-03-02,2026-04-13,18.82,272,clicks,7p / click
+Episode Reaction 3,Instagram,paused,2026-04-13,,72.49,428,profile visits,17p / visit`;
+
+let state = { view: 'weekly', weekly: [], campaigns: [] };
+
+/* CSV PARSING */
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.replace(/\r\n/g, '\n').split('\n').filter(l => l.trim());
+  for (const line of lines) {
+    const row = []; let cur = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (c === ',' && !inQuotes) { row.push(cur); cur = ''; }
+      else cur += c;
+    }
+    row.push(cur); rows.push(row);
+  }
+  return rows;
+}
+function rowsToObjects(rows, numericFields) {
+  if (rows.length < 2) return { headers: [], data: [] };
+  const headers = rows[0].map(h => h.trim());
+  const data = rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      const v = (row[i] || '').trim();
+      if (v === '') obj[h] = null;
+      else if (numericFields.includes(h)) {
+        const n = parseFloat(v.replace(/[£$,\s]/g, ''));
+        obj[h] = isNaN(n) ? null : n;
+      } else obj[h] = v;
+    });
+    return obj;
+  });
+  return { headers, data };
+}
+
+/* FORMATTERS */
+function fmt(value, format) {
+  if (value === null || value === undefined || isNaN(value)) return '—';
+  if (format === 'currency') return '£' + Math.round(value).toLocaleString('en-GB');
+  if (format === 'currency-precise')
+    return '£' + value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (format === 'number') return Math.round(value).toLocaleString('en-GB');
+  if (format === 'percent') return value.toFixed(1) + '%';
+  return value.toString();
+}
+function fmtDelta(curr, prev) {
+  if (curr === null || prev === null || prev === 0) return { text: '—', cls: 'flat' };
+  const diff = curr - prev;
+  const pct = (diff / prev) * 100;
+  if (Math.abs(pct) < 0.05) return { text: 'no change', cls: 'flat' };
+  const sign = diff > 0 ? '+' : '';
+  const text = `${sign}${Math.abs(pct) < 10 ? pct.toFixed(1) : Math.round(pct)}% vs prev`;
+  return { text, cls: diff > 0 ? 'up' : 'down' };
+}
+function fmtWeekLabel(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return dateStr;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+function fmtMonthLabel(dateStr) {
+  const [y, m] = dateStr.split('-');
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${months[parseInt(m) - 1]} ${y}`;
+}
+function fmtDateRange(start, end) {
+  if (!start) return '—';
+  const s = fmtWeekLabel(start);
+  if (!end) return `${s} → ongoing`;
+  return `${s} → ${fmtWeekLabel(end)}`;
+}
+
+/* AGGREGATION */
+function aggregateMonthly(weekly) {
+  const additive = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations'];
+  const stock = ['spotify_listeners', 'patreon_total_subs', 'patreon_mrr',
+                 'ig_followers', 'fb_followers', 'tiktok_followers'];
+  const buckets = {};
+  for (const row of weekly) {
+    const monthKey = row.week_starting.substring(0, 7);
+    if (!buckets[monthKey]) buckets[monthKey] = { month: monthKey, weeks: [] };
+    buckets[monthKey].weeks.push(row);
+  }
+  return Object.values(buckets).map(b => {
+    const last = b.weeks[b.weeks.length - 1];
+    const out = { month: b.month, week_count: b.weeks.length };
+    for (const k of additive) {
+      const hasAny = b.weeks.some(r => r[k] !== null);
+      out[k] = hasAny ? b.weeks.reduce((a, r) => a + (r[k] || 0), 0) : null;
+    }
+    for (const k of stock) out[k] = last[k];
+    out.notes = b.weeks.map(w => w.notes).filter(Boolean).join(' · ');
+    return out;
+  }).sort((a, b) => a.month.localeCompare(b.month));
+}
+function costPerNewSub(row) {
+  if (!row.meta_spend || !row.new_patreon_subs) return null;
+  return row.meta_spend / row.new_patreon_subs;
+}
+
+/* RENDER: MONTHLY READ */
+function renderMonthlyRead() {
+  const c = document.getElementById('monthly-read-container');
+  const mr = CONFIG.MONTHLY_READ;
+  if (!mr || !mr.paragraphs || mr.paragraphs.length === 0) { c.innerHTML = ''; return; }
+  c.innerHTML = `
+    <div class="monthly-read">
+      <div class="monthly-read-meta">${mr.period} · The read</div>
+      <h2>${mr.title}</h2>
+      ${mr.paragraphs.map(p => `<p>${p}</p>`).join('')}
+    </div>
+  `;
+}
+
+/* RENDER: GROWTH HISTORY — 3+ years of monthly joiners */
+function renderGrowthHistory() {
+  const c = document.getElementById('growth-history-container');
+  const data = CONFIG.MONTHLY_JOINERS;
+  if (!data || data.length === 0) { c.innerHTML = ''; return; }
+
+  const totalPaid = data.reduce((a, d) => a + d.paid, 0);
+  const monthsElapsed = data.length;
+  const avgPaid = totalPaid / monthsElapsed;
+
+  // === Year-over-year stats ===
+  const yearStats = (year) => {
+    const months = data.filter(d => d.month.startsWith(String(year)));
+    if (months.length === 0) return null;
+    const paid = months.map(d => d.paid);
+    const total = months.map(d => d.total);
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const bestPaidIdx = paid.indexOf(Math.max(...paid));
+    return {
+      year,
+      months: months.length,
+      avgPaid: paid.reduce((a, b) => a + b, 0) / paid.length,
+      avgTotal: total.reduce((a, b) => a + b, 0) / total.length,
+      totalPaid: paid.reduce((a, b) => a + b, 0),
+      totalAll: total.reduce((a, b) => a + b, 0),
+      bestMonth: months[bestPaidIdx].month,
+      bestMonthName: monthNames[parseInt(months[bestPaidIdx].month.split('-')[1]) - 1],
+      bestPaidValue: paid[bestPaidIdx],
+    };
+  };
+
+  const y2025 = yearStats(2025);
+  const y2026 = yearStats(2026);
+
+  let yoyPanel = '';
+  if (y2025 && y2026) {
+    const paidChange = ((y2026.avgPaid - y2025.avgPaid) / y2025.avgPaid) * 100;
+    const totalChange = ((y2026.avgTotal - y2025.avgTotal) / y2025.avgTotal) * 100;
+    const paidClass = paidChange > 0 ? 'good' : paidChange < 0 ? 'bad' : 'flat';
+    const totalClass = totalChange > 0 ? 'good' : totalChange < 0 ? 'bad' : 'flat';
+    const paidSign = paidChange > 0 ? '+' : '';
+    const totalSign = totalChange > 0 ? '+' : '';
+
+    yoyPanel = `
+      <div class="yoy-panel">
+        <div class="yoy-block">
+          <div class="yoy-label">Paid joiners / month</div>
+          <div class="yoy-compare">
+            <div class="yoy-old"><span class="yoy-year">2025</span><span class="yoy-value">${y2025.avgPaid.toFixed(1)}</span></div>
+            <div class="yoy-arrow">→</div>
+            <div class="yoy-new"><span class="yoy-year">2026</span><span class="yoy-value">${y2026.avgPaid.toFixed(1)}</span></div>
+            <div class="yoy-change"><span class="ltv-pill ${paidClass}">${paidSign}${paidChange.toFixed(0)}%</span></div>
+          </div>
+          <div class="yoy-context">
+            Best month 2025: <strong>${y2025.bestPaidValue}</strong> (${y2025.bestMonthName}) ·
+            Best month 2026: <strong>${y2026.bestPaidValue}</strong> (${y2026.bestMonthName})
+          </div>
+        </div>
+        <div class="yoy-block">
+          <div class="yoy-label">Total joiners / month (incl. free)</div>
+          <div class="yoy-compare">
+            <div class="yoy-old"><span class="yoy-year">2025</span><span class="yoy-value">${y2025.avgTotal.toFixed(1)}</span></div>
+            <div class="yoy-arrow">→</div>
+            <div class="yoy-new"><span class="yoy-year">2026</span><span class="yoy-value">${y2026.avgTotal.toFixed(1)}</span></div>
+            <div class="yoy-change"><span class="ltv-pill ${totalClass}">${totalSign}${totalChange.toFixed(0)}%</span></div>
+          </div>
+          <div class="yoy-context">
+            ${y2026.months} months of 2026 so far ·
+            On pace for ~${Math.round(y2026.avgTotal * 12)} total joiners (vs ${y2025.totalAll} in 2025)
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // === Chart geometry ===
+  const W = 1200, H = 320;
+  const PAD_L = 40, PAD_R = 16, PAD_T = 30, PAD_B = 60;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+  const n = data.length;
+  const groupW = innerW / n;
+  const barW = Math.min(groupW * 0.72, 22);
+
+  const maxTotal = Math.max(...data.map(d => d.total));
+  const yMax = Math.ceil(maxTotal / 20) * 20;
+  const yScale = v => PAD_T + innerH - (v / yMax) * innerH;
+
+  // Bars with richer tooltip data
+  const monthNamesShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const bars = data.map((d, i) => {
+    const cx = PAD_L + groupW * i + groupW / 2;
+    const x = cx - barW / 2;
+    const yPaid = yScale(d.paid);
+    const yTotal = yScale(d.total);
+    const hPaid = (PAD_T + innerH) - yPaid;
+    const hUnpaid = yPaid - yTotal;
+    const [yr, mn] = d.month.split('-');
+    const monthLabel = `${monthNamesShort[parseInt(mn)-1]} ${yr}`;
+    const tooltipText = `${monthLabel} — ${d.paid} paid + ${d.total - d.paid} free = ${d.total} total`;
+
+    // Larger transparent hit area covering both stacked rects, for easier hover
+    return `
+      <rect class="bar-hit" x="${x - 3}" y="${yTotal - 2}" width="${barW + 6}" height="${(PAD_T + innerH) - yTotal + 4}"
+            fill="transparent" data-label="${tooltipText}"/>
+      <rect class="bar unpaid" x="${x}" y="${yTotal}" width="${barW}" height="${hUnpaid}"
+            data-label="${tooltipText}"/>
+      <rect class="bar" x="${x}" y="${yPaid}" width="${barW}" height="${hPaid}"
+            data-label="${tooltipText}"/>
+    `;
+  }).join('');
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(p => Math.round(yMax * p));
+  const gridLines = yTicks.map(t => {
+    const y = yScale(t).toFixed(1);
+    return `
+      <line class="grid-line" x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}"/>
+      <text class="axis-label" x="${PAD_L - 6}" y="${parseFloat(y) + 3}" text-anchor="end">${t}</text>
+    `;
+  }).join('');
+
+  const xLabels = data.map((d, i) => {
+    const cx = PAD_L + groupW * i + groupW / 2;
+    const [y, m] = d.month.split('-');
+    const isJan = m === '01';
+    const isFirst = i === 0;
+    const isLast = i === data.length - 1;
+    if (isJan || isFirst || isLast) {
+      const label = isJan ? `Jan ${y}` : `${monthNamesShort[parseInt(m)-1]} ${y.slice(2)}`;
+      return `<text class="axis-label" x="${cx}" y="${H - 42}" text-anchor="middle">${label}</text>`;
+    }
+    return '';
+  }).join('');
+
+  const milestones = (CONFIG.MILESTONES || []).map((ms, idx) => {
+    const dataIdx = data.findIndex(d => d.month === ms.month);
+    if (dataIdx === -1) return '';
+    const cx = PAD_L + groupW * dataIdx + groupW / 2;
+    const labelY = PAD_T - 14;
+    return `
+      <line class="marker-line" x1="${cx}" y1="${PAD_T}" x2="${cx}" y2="${PAD_T + innerH}"/>
+      <text class="marker-label" x="${cx}" y="${labelY}" text-anchor="middle">${ms.label}</text>
+    `;
+  }).join('');
+
+  c.innerHTML = `
+    <div class="growth-card">
+      <div class="growth-header">
+        <h3>How sub growth has trended since launch</h3>
+        <div class="meta">${monthsElapsed} months · ${totalPaid} paid joiners total</div>
+      </div>
+      <div class="growth-subtitle">
+        New joiners per month, October 2022 → today.
+        Hover any bar to see exact numbers. Dashed markers show key moments.
+      </div>
+      ${yoyPanel}
+      <svg class="growth-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+        ${gridLines}
+        ${bars}
+        ${xLabels}
+        ${milestones}
+      </svg>
+      <div class="growth-legend">
+        <div class="growth-legend-item"><span class="growth-legend-swatch paid"></span>Paid joiners</div>
+        <div class="growth-legend-item"><span class="growth-legend-swatch free"></span>Free joiners</div>
+      </div>
+    </div>
+  `;
+
+  // attach tooltips to bars (including transparent hit areas)
+  document.querySelectorAll('svg.growth-chart .bar, svg.growth-chart .bar-hit').forEach(bar => {
+    bar.addEventListener('mouseenter', (e) => {
+      const tip = document.getElementById('tooltip');
+      tip.textContent = e.target.dataset.label;
+      tip.classList.add('visible');
+    });
+    bar.addEventListener('mousemove', (e) => {
+      const tip = document.getElementById('tooltip');
+      tip.style.left = (e.clientX + 12) + 'px';
+      tip.style.top = (e.clientY - 8) + 'px';
+    });
+    bar.addEventListener('mouseleave', () => {
+      document.getElementById('tooltip').classList.remove('visible');
+    });
+  });
+}
+
+/* RENDER: TIER MIX */
+function renderTierMix() {
+  const c = document.getElementById('tier-mix-container');
+  const mix = CONFIG.TIER_MIX;
+  if (!mix || mix.length === 0) { c.innerHTML = ''; return; }
+
+  const totalSubs = mix.reduce((a, t) => a + t.subs, 0);
+  const totalMRR = mix.reduce((a, t) => a + t.mrr, 0);
+
+  const subsBar = mix.map((t, i) => {
+    const pct = (t.subs / totalSubs) * 100;
+    return `<div class="tier-segment t${i+1}" style="width:${pct}%" title="${t.name}: ${t.subs} subs">${pct > 8 ? Math.round(pct) + '%' : ''}</div>`;
+  }).join('');
+
+  const mrrBar = mix.map((t, i) => {
+    const pct = (t.mrr / totalMRR) * 100;
+    return `<div class="tier-segment t${i+1}" style="width:${pct}%" title="${t.name}: £${t.mrr}/mo">${pct > 8 ? Math.round(pct) + '%' : ''}</div>`;
+  }).join('');
+
+  const legend = mix.map((t, i) =>
+    `<div class="tier-legend-item"><span class="tier-swatch t${i+1}"></span>${t.name} · ${t.subs} subs · £${t.mrr}/mo</div>`
+  ).join('');
+
+  // Find biggest mismatch — tier with biggest gap between % subs and % MRR
+  let insight = '';
+  const top = mix.map(t => ({
+    name: t.name,
+    pctSubs: (t.subs / totalSubs) * 100,
+    pctMRR: (t.mrr / totalMRR) * 100,
+    gap: ((t.mrr / totalMRR) - (t.subs / totalSubs)) * 100,
+  })).sort((a, b) => b.gap - a.gap);
+  if (top[0].gap > 5) {
+    insight = `<strong>${top[0].name}</strong> punches above its weight — only ${Math.round(top[0].pctSubs)}% of subs but ${Math.round(top[0].pctMRR)}% of revenue. Worth thinking about whether other subs could upgrade.`;
+  }
+
+  c.innerHTML = `
+    <div class="tier-mix-card">
+      <div class="tier-mix-header">
+        <h3>Patreon tier mix</h3>
+        <div class="meta">${totalSubs} paid subs · £${totalMRR.toLocaleString('en-GB')}/mo gross</div>
+      </div>
+      <div class="tier-mix-grid">
+        <div class="tier-bar-block">
+          <div>
+            <div class="tier-bar-label">Share of subscribers</div>
+            <div class="tier-bar">${subsBar}</div>
+          </div>
+          <div>
+            <div class="tier-bar-label">Share of revenue</div>
+            <div class="tier-bar">${mrrBar}</div>
+          </div>
+          <div class="tier-legend">${legend}</div>
+        </div>
+        ${insight ? `<div class="tier-insight">${insight}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/* RENDER: KPI TILE */
+function renderKpiTile(label, value, deltaInfo, context) {
+  const deltaHtml = deltaInfo ? `<div><span class="kpi-delta ${deltaInfo.cls}">${deltaInfo.text}</span></div>` : '';
+  const contextHtml = context ? `<div class="kpi-context">${context}</div>` : '';
+  return `
+    <div class="kpi">
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-value">${value}</div>
+      ${deltaHtml}
+      ${contextHtml}
+    </div>
+  `;
+}
+
+/* RENDER: MONEY KPIs */
+function renderMoneyKpis() {
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  if (data.length === 0) {
+    document.getElementById('money-kpis').innerHTML =
+      '<div class="empty-state" style="grid-column:1/-1">No data yet</div>';
+    return;
+  }
+  const latest = data[data.length - 1];
+  const prev = data.length > 1 ? data[data.length - 2] : null;
+  const periodLabel = state.view === 'weekly' ? 'this week' : 'this month';
+
+  const mrr = latest.patreon_mrr;
+  const mrrDelta = prev ? fmtDelta(mrr, prev.patreon_mrr) : null;
+
+  const newSubs = latest.new_patreon_subs;
+  const newSubsDelta = prev ? fmtDelta(newSubs, prev.new_patreon_subs) : null;
+
+  const cancels = latest.paid_cancellations;
+  // For cancellations, MORE is BAD — invert the colour like cost-per-sub
+  let cancelsDelta = null;
+  if (cancels !== null && prev && prev.paid_cancellations !== null) {
+    const raw = fmtDelta(cancels, prev.paid_cancellations);
+    cancelsDelta = {
+      text: raw.text,
+      cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
+    };
+  }
+
+  // Net growth = new subs - cancellations
+  const netGrowth = (newSubs !== null && cancels !== null) ? newSubs - cancels : null;
+
+  const cps = costPerNewSub(latest);
+  const cpsPrev = prev ? costPerNewSub(prev) : null;
+  let cpsDelta = null;
+  if (cps !== null && cpsPrev !== null) {
+    const raw = fmtDelta(cps, cpsPrev);
+    cpsDelta = {
+      text: raw.text,
+      cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
+    };
+  }
+
+  document.getElementById('money-kpis').innerHTML = [
+    renderKpiTile('Patreon MRR', fmt(mrr, 'currency'), mrrDelta,
+      `Total paid subs: ${fmt(latest.patreon_total_subs, 'number')}`),
+    renderKpiTile(`New subs ${periodLabel}`, fmt(newSubs, 'number'), newSubsDelta,
+      `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}`),
+    renderCancellationsTile(cancels, cancelsDelta, netGrowth),
+    renderCostPerSubTile(cps, cpsDelta),
+  ].join('');
+}
+
+/* Cancellations tile — shows the churn flow and net growth context */
+function renderCancellationsTile(cancels, cancelsDelta, netGrowth) {
+  const deltaHtml = cancelsDelta
+    ? `<div><span class="kpi-delta ${cancelsDelta.cls}">${cancelsDelta.text}</span></div>` : '';
+
+  let contextHtml = '';
+  if (netGrowth !== null) {
+    const netClass = netGrowth > 0 ? 'good' : netGrowth < 0 ? 'bad' : 'flat';
+    const netSign = netGrowth > 0 ? '+' : '';
+    contextHtml = `
+      <div class="kpi-context">
+        <span class="ltv-pill ${netClass}">
+          ${netSign}${netGrowth} net
+        </span>
+        after cancellations
+      </div>
+    `;
+  } else {
+    contextHtml = `<div class="kpi-context">Paid subs that cancelled this period.</div>`;
+  }
+
+  return `
+    <div class="kpi">
+      <div class="kpi-label">Cancellations</div>
+      <div class="kpi-value">${cancels !== null ? fmt(cancels, 'number') : '—'}</div>
+      ${deltaHtml}
+      ${contextHtml}
+    </div>
+  `;
+}
+
+/* Cost per sub gets its own renderer so we can show the LTV ratio */
+function renderCostPerSubTile(cps, cpsDelta) {
+  const ltv = CONFIG.SUB_LTV;
+  const deltaHtml = cpsDelta
+    ? `<div><span class="kpi-delta ${cpsDelta.cls}">${cpsDelta.text}</span></div>` : '';
+
+  let contextHtml = '';
+  if (cps !== null && ltv) {
+    const margin = ltv - cps;
+    const ratio = ltv / cps;
+    const marginClass = margin > 0 ? 'good' : 'bad';
+    contextHtml = `
+      <div class="kpi-context">
+        <span class="ltv-pill ${marginClass}">
+          ${margin > 0 ? '+' : ''}£${Math.round(margin)} margin
+        </span>
+        per sub against £${ltv} LTV (${ratio.toFixed(1)}× return)
+      </div>
+    `;
+  } else {
+    contextHtml = `<div class="kpi-context">Lower is better. Avg sub LTV is £${ltv}.</div>`;
+  }
+
+  return `
+    <div class="kpi">
+      <div class="kpi-label">Cost per new sub</div>
+      <div class="kpi-value">${cps !== null ? fmt(cps, 'currency-precise') : '—'}</div>
+      ${deltaHtml}
+      ${contextHtml}
+    </div>
+  `;
+}
+
+/* RENDER: AUDIENCE KPIs */
+function renderAudienceKpis() {
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  if (data.length === 0) {
+    document.getElementById('audience-kpis').innerHTML =
+      '<div class="empty-state" style="grid-column:1/-1">No data yet</div>';
+    return;
+  }
+  const latest = data[data.length - 1];
+  const prev = data.length > 1 ? data[data.length - 2] : null;
+
+  document.getElementById('audience-kpis').innerHTML = [
+    renderKpiTile('Spotify listeners', fmt(latest.spotify_listeners, 'number'),
+      prev ? fmtDelta(latest.spotify_listeners, prev.spotify_listeners) : null),
+    renderKpiTile('Instagram followers', fmt(latest.ig_followers, 'number'),
+      prev ? fmtDelta(latest.ig_followers, prev.ig_followers) : null),
+    renderKpiTile('TikTok followers', fmt(latest.tiktok_followers, 'number'),
+      prev ? fmtDelta(latest.tiktok_followers, prev.tiktok_followers) : null),
+  ].join('');
+}
+
+/* RENDER: CHART */
+function renderChart(metric, data) {
+  const xKey = state.view === 'weekly' ? 'week_starting' : 'month';
+  const labelFn = state.view === 'weekly' ? fmtWeekLabel : fmtMonthLabel;
+  const points = data.map(d => ({ x: d[xKey], y: d[metric.key], label: labelFn(d[xKey]) }))
+                     .filter(p => p.y !== null && !isNaN(p.y));
+
+  if (points.length === 0) {
+    return `<div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">${metric.label}</div></div></div>
+      <div style="height:160px;display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:12px">No data yet</div>
+    </div>`;
+  }
+
+  const W = 600, H = 160, PAD_L = 50, PAD_R = 16, PAD_T = 16, PAD_B = 26;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+  const ys = points.map(p => p.y);
+  let yMin = Math.min(...ys); let yMax = Math.max(...ys);
+  const range = yMax - yMin || yMax * 0.1 || 1;
+  yMin = Math.max(0, yMin - range * 0.15);
+  yMax = yMax + range * 0.2;
+  const xScale = i => points.length === 1
+    ? PAD_L + innerW / 2
+    : PAD_L + (i / (points.length - 1)) * innerW;
+  const yScale = v => PAD_T + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
+  const linePath = points.map((p, i) =>
+    `${i === 0 ? 'M' : 'L'} ${xScale(i).toFixed(1)} ${yScale(p.y).toFixed(1)}`).join(' ');
+  const areaPath = linePath +
+    ` L ${xScale(points.length - 1).toFixed(1)} ${PAD_T + innerH}` +
+    ` L ${xScale(0).toFixed(1)} ${PAD_T + innerH} Z`;
+  const yTicks = [yMin, (yMin + yMax) / 2, yMax];
+  const gridLines = yTicks.map(t => {
+    const y = yScale(t).toFixed(1);
+    return `<line class="grid-line" x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}"/>
+      <text class="axis-label" x="${PAD_L - 6}" y="${parseFloat(y) + 3}" text-anchor="end">${fmt(t, metric.format)}</text>`;
+  }).join('');
+  const xLabelIndices = points.length <= 4 ? points.map((_, i) => i)
+    : [0, Math.floor(points.length / 2), points.length - 1];
+  const xLabels = xLabelIndices.map(i =>
+    `<text class="axis-label" x="${xScale(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${points[i].label}</text>`).join('');
+  const dots = points.map((p, i) =>
+    `<circle class="data-point" cx="${xScale(i).toFixed(1)}" cy="${yScale(p.y).toFixed(1)}" r="3"
+      data-label="${p.label}: ${fmt(p.y, metric.format)}"></circle>`).join('');
+  const current = points[points.length - 1].y;
+
+  return `<div class="chart-card">
+    <div class="chart-header">
+      <div><div class="chart-title">${metric.label}</div>
+        <div class="chart-meta">${state.view === 'weekly' ? 'Weekly' : 'Monthly'}</div></div>
+      <div class="chart-current">${fmt(current, metric.format)}</div>
+    </div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      ${gridLines}
+      <path class="data-area" d="${areaPath}"/>
+      <path class="data-line" d="${linePath}"/>
+      ${dots}${xLabels}
+    </svg>
+  </div>`;
+}
+
+function renderMoneyCharts() {
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  const metrics = [
+    { key: 'patreon_mrr',      label: 'Patreon MRR', format: 'currency' },
+    { key: 'new_patreon_subs', label: 'New subs',    format: 'number' },
+  ];
+  document.getElementById('money-charts').innerHTML =
+    metrics.map(m => renderChart(m, data)).join('');
+}
+function renderAudienceCharts() {
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  const metrics = [
+    { key: 'spotify_listeners', label: 'Spotify listeners', format: 'number' },
+    { key: 'ig_followers',      label: 'Instagram',         format: 'number' },
+    { key: 'tiktok_followers',  label: 'TikTok',            format: 'number' },
+    { key: 'fb_followers',      label: 'Facebook',          format: 'number' },
+  ];
+  document.getElementById('audience-charts').innerHTML =
+    metrics.map(m => renderChart(m, data)).join('');
+}
+
+/* RENDER: CAMPAIGNS */
+function renderCampaigns() {
+  const c = document.getElementById('campaigns-card');
+  if (state.campaigns.length === 0) {
+    c.innerHTML = `<div class="campaigns-header"><h3>Campaigns</h3></div>
+      <div class="empty-state">No campaigns logged yet.</div>`;
+    return;
+  }
+  const statusOrder = { live: 0, paused: 1, ended: 2 };
+  const sorted = [...state.campaigns].sort((a, b) => {
+    const sa = statusOrder[a.status] ?? 99;
+    const sb = statusOrder[b.status] ?? 99;
+    if (sa !== sb) return sa - sb;
+    return (b.start_date || '').localeCompare(a.start_date || '');
+  });
+  const liveCount = state.campaigns.filter(c => c.status === 'live').length;
+
+  const rows = sorted.map(c => {
+    const result = c.primary_result !== null
+      ? `<div class="num">${fmt(c.primary_result, 'number')}</div><div class="lbl">${c.result_label || 'results'}</div>`
+      : `<div class="num">—</div>`;
+    const efficiency = c.secondary_metric
+      ? `<div class="num">${c.secondary_metric}</div>` : `<div class="num">—</div>`;
+    const spend = c.spend !== null ? fmt(c.spend, 'currency') : '—';
+    return `<div class="campaign-row">
+      <div class="campaign-status ${c.status || ''}" title="${c.status || ''}"></div>
+      <div class="campaign-meta">
+        <div class="campaign-name">${c.name || 'Unnamed'}</div>
+        <div class="campaign-dates">${c.platform || ''} · ${fmtDateRange(c.start_date, c.end_date)}</div>
+      </div>
+      <div class="campaign-cell right desktop-only">
+        <div class="num">${spend}</div><div class="lbl">spent</div>
+      </div>
+      <div class="campaign-cell right desktop-only">${result}</div>
+      <div class="campaign-cell right">${efficiency}</div>
+    </div>`;
+  }).join('');
+
+  c.innerHTML = `<div class="campaigns-header">
+    <h3>Campaigns</h3>
+    <div class="count">${liveCount} live · ${state.campaigns.length} total</div>
+  </div>
+  <div class="campaign-header-row">
+    <div></div><div>Campaign</div>
+    <div class="right desktop-only">Spend</div>
+    <div class="right desktop-only">Primary result</div>
+    <div class="right">Efficiency</div>
+  </div>
+  ${rows}`;
+}
+
+/* RENDER: TABLE */
+function renderTable() {
+  const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
+  const xKey = state.view === 'weekly' ? 'week_starting' : 'month';
+  const labelFn = state.view === 'weekly' ? fmtWeekLabel : fmtMonthLabel;
+  document.getElementById('table-title').textContent =
+    state.view === 'weekly' ? 'Weekly entries' : 'Monthly rollup';
+  if (data.length === 0) {
+    document.getElementById('data-table').innerHTML =
+      '<tbody><tr><td class="empty">No data yet</td></tr></tbody>';
+    return;
+  }
+  const cols = [
+    { key: 'patreon_mrr',         label: 'MRR',         format: 'currency' },
+    { key: 'patreon_total_subs',  label: 'Total subs',  format: 'number' },
+    { key: 'new_patreon_subs',    label: 'New subs',    format: 'number' },
+    { key: 'paid_cancellations',  label: 'Cancels',     format: 'number' },
+    { key: 'spotify_listeners',   label: 'Spotify',     format: 'number' },
+    { key: 'ig_followers',        label: 'IG',          format: 'number' },
+    { key: 'tiktok_followers',    label: 'TikTok',      format: 'number' },
+    { key: 'fb_followers',        label: 'FB',          format: 'number' },
+    { key: 'meta_spend',          label: 'Ad spend',    format: 'currency' },
+    { key: 'meta_clicks',         label: 'Ad clicks',   format: 'number' },
+  ];
+  const headers = [state.view === 'weekly' ? 'Week' : 'Month', ...cols.map(c => c.label)];
+  const reversed = [...data].reverse();
+  const rows = reversed.map(row => {
+    const cells = [
+      `<td>${labelFn(row[xKey])}</td>`,
+      ...cols.map(c => {
+        const v = row[c.key];
+        return v === null || v === undefined
+          ? `<td class="empty">—</td>` : `<td>${fmt(v, c.format)}</td>`;
+      }),
+    ];
+    return `<tr>${cells.join('')}</tr>`;
+  }).join('');
+  document.getElementById('data-table').innerHTML = `
+    <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
+function renderAll() {
+  renderMonthlyRead();
+  renderMoneyKpis();
+  renderMoneyCharts();
+  renderTierMix();
+  renderGrowthHistory();
+  renderAudienceKpis();
+  renderAudienceCharts();
+  renderCampaigns();
+  renderTable();
+  attachTooltips();
+}
+
+function attachTooltips() {
+  const tooltip = document.getElementById('tooltip');
+  document.querySelectorAll('svg.chart .data-point').forEach(dot => {
+    dot.addEventListener('mouseenter', (e) => {
+      tooltip.textContent = e.target.dataset.label;
+      tooltip.classList.add('visible');
+    });
+    dot.addEventListener('mousemove', (e) => {
+      tooltip.style.left = (e.clientX + 12) + 'px';
+      tooltip.style.top = (e.clientY - 8) + 'px';
+    });
+    dot.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+  });
+}
+
+document.querySelectorAll('.view-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.view = btn.dataset.view;
+    renderAll();
+  });
+});
+
+async function fetchCSV(url) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.text();
+}
+
+async function loadData() {
+  let weeklyCsv, campaignsCsv;
+  let usingDemo = false;
+  const errors = [];
+
+  if (CONFIG.WEEKLY_CSV_URL) {
+    try { weeklyCsv = await fetchCSV(CONFIG.WEEKLY_CSV_URL); }
+    catch (e) { errors.push('Weekly tab: ' + e.message); weeklyCsv = DEMO_WEEKLY; usingDemo = true; }
+  } else { weeklyCsv = DEMO_WEEKLY; usingDemo = true; }
+
+  if (CONFIG.CAMPAIGNS_CSV_URL) {
+    try { campaignsCsv = await fetchCSV(CONFIG.CAMPAIGNS_CSV_URL); }
+    catch (e) { errors.push('Campaigns tab: ' + e.message); campaignsCsv = DEMO_CAMPAIGNS; usingDemo = true; }
+  } else { campaignsCsv = DEMO_CAMPAIGNS; usingDemo = true; }
+
+  const weeklyNumeric = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations',
+    'spotify_listeners', 'patreon_total_subs', 'patreon_mrr',
+    'ig_followers', 'fb_followers', 'tiktok_followers'];
+  state.weekly = rowsToObjects(parseCSV(weeklyCsv), weeklyNumeric).data
+    .filter(r => r.week_starting)
+    .sort((a, b) => a.week_starting.localeCompare(b.week_starting));
+
+  const campaignNumeric = ['spend', 'primary_result'];
+  state.campaigns = rowsToObjects(parseCSV(campaignsCsv), campaignNumeric).data
+    .filter(r => r.name);
+
+  if (errors.length > 0) {
+    document.querySelector('.wrap').insertAdjacentHTML('afterbegin', `
+      <div class="error">Some data couldn't load: ${errors.join('; ')}. Showing demo data for affected sections.</div>
+    `);
+  }
+  if (usingDemo) {
+    document.querySelector('.wrap').insertAdjacentHTML('afterbegin', `
+      <div style="background:var(--paper-2); border:1.5px dashed var(--accent); padding:14px 18px; margin-bottom:24px; font-size:13px; color:var(--ink)">
+        <strong style="font-family:var(--display); font-size:15px; color:var(--accent)">Demo data</strong> —
+        showing example numbers. Set <code style="background:var(--card); padding:1px 4px">CONFIG.WEEKLY_CSV_URL</code>
+        and <code style="background:var(--card); padding:1px 4px">CONFIG.CAMPAIGNS_CSV_URL</code> to connect.
+      </div>
+    `);
+  }
+  if (state.weekly.length > 0) {
+    document.getElementById('last-updated').textContent =
+      fmtWeekLabel(state.weekly[state.weekly.length - 1].week_starting);
+  }
+  if (CONFIG.SHEET_EDIT_URL && CONFIG.SHEET_EDIT_URL !== '#') {
+    document.getElementById('sheet-link').href = CONFIG.SHEET_EDIT_URL;
+  }
+  renderAll();
+}
+
+loadData();
+</script>
+
+</body>
+</html>
