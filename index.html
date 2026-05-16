@@ -178,6 +178,23 @@
   }
   .ltv-pill.good { color: var(--good); background: var(--good-bg); }
   .ltv-pill.bad  { color: var(--bad);  background: var(--bad-bg);  }
+  .ltv-pill.flat { color: var(--muted); background: var(--paper-2); }
+
+  /* IN-PROGRESS BADGE — flags a partial month in the table */
+  .in-progress-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    background: var(--accent);
+    color: var(--card);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    vertical-align: 1px;
+  }
 
   /* TIER MIX */
   .tier-mix-card {
@@ -896,6 +913,9 @@ function fmtDateRange(start, end) {
 }
 
 /* AGGREGATION */
+// Allocate weekly data to calendar months proportionally (day-level fairness).
+// E.g. a week spanning Mar 30 - Apr 5 contributes 2/7 of its values to March, 5/7 to April.
+// Also flags which months are 'in_progress' (today falls within the month and we have data).
 function aggregateMonthly(weekly) {
   const additive = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations',
                     'new_ig_follows', 'new_fb_follows',
@@ -903,23 +923,110 @@ function aggregateMonthly(weekly) {
                     'ig_link_clicks', 'fb_link_clicks'];
   const stock = ['monthly_listens', 'patreon_total_subs', 'patreon_mrr',
                  'ig_followers', 'fb_followers', 'tiktok_followers'];
+
+  // Bucket weeks into months by day-level overlap
   const buckets = {};
-  for (const row of weekly) {
-    const monthKey = row.week_starting.substring(0, 7);
-    if (!buckets[monthKey]) buckets[monthKey] = { month: monthKey, weeks: [] };
-    buckets[monthKey].weeks.push(row);
-  }
-  return Object.values(buckets).map(b => {
-    const last = b.weeks[b.weeks.length - 1];
-    const out = { month: b.month, week_count: b.weeks.length };
-    for (const k of additive) {
-      const hasAny = b.weeks.some(r => r[k] !== null);
-      out[k] = hasAny ? b.weeks.reduce((a, r) => a + (r[k] || 0), 0) : null;
+  function getBucket(monthKey) {
+    if (!buckets[monthKey]) {
+      buckets[monthKey] = { month: monthKey, days_with_data: 0,
+                            sums: {}, latest_stock: {}, latest_date: '',
+                            notes_arr: [] };
+      additive.forEach(k => buckets[monthKey].sums[k] = { val: 0, has: false });
     }
-    for (const k of stock) out[k] = last[k];
-    out.notes = b.weeks.map(w => w.notes).filter(Boolean).join(' · ');
+    return buckets[monthKey];
+  }
+
+  for (const row of weekly) {
+    if (!row.week_starting) continue;
+    const [y, m, d] = row.week_starting.split('-').map(Number);
+    const weekStart = new Date(Date.UTC(y, m - 1, d));
+
+    // Build per-day allocation: which month does each day belong to?
+    const dayMonths = {};
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setUTCDate(day.getUTCDate() + i);
+      const mk = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}`;
+      dayMonths[mk] = (dayMonths[mk] || 0) + 1;
+    }
+
+    // Allocate additive metrics proportionally by day count
+    for (const [mk, days] of Object.entries(dayMonths)) {
+      const b = getBucket(mk);
+      const frac = days / 7;
+      b.days_with_data += days;
+      for (const k of additive) {
+        if (row[k] !== null && row[k] !== undefined) {
+          b.sums[k].val += row[k] * frac;
+          b.sums[k].has = true;
+        }
+      }
+      // Stock metrics: take the LATEST observation that falls in this month
+      // We use week_starting as a proxy date for the snapshot; assume any stock
+      // value applies to the month the week starts in (mostly correct for our data)
+      if (mk === Object.keys(dayMonths)[0]) {  // primary month for this week
+        for (const k of stock) {
+          if (row[k] !== null && row[k] !== undefined) {
+            if (!b.latest_date || row.week_starting > b.latest_date) {
+              b.latest_stock[k] = row[k];
+            }
+          }
+        }
+        if (!b.latest_date || row.week_starting > b.latest_date) {
+          b.latest_date = row.week_starting;
+        }
+      }
+      if (row.notes) b.notes_arr.push(row.notes);
+    }
+  }
+
+  // Determine which months are in progress: ANY future days remain in that month
+  const now = new Date();
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+  const months = Object.values(buckets).map(b => {
+    const [y, m] = b.month.split('-').map(Number);
+    const monthLastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const monthEnd = new Date(Date.UTC(y, m - 1, monthLastDay));
+    // 'in progress' if today is in/before month-end AND we don't have data for every day yet
+    const inProgress = (todayUTC <= monthEnd && b.days_with_data > 0) ||
+                       (b.days_with_data > 0 && b.days_with_data < monthLastDay);
+
+    const out = { month: b.month, in_progress: inProgress,
+                  days_with_data: b.days_with_data, days_in_month: monthLastDay };
+    for (const k of additive) {
+      out[k] = b.sums[k].has ? Math.round(b.sums[k].val) : null;
+    }
+    for (const k of stock) {
+      out[k] = b.latest_stock[k] !== undefined ? b.latest_stock[k] : null;
+    }
+    out.notes = b.notes_arr.filter(Boolean).join(' · ');
     return out;
   }).sort((a, b) => a.month.localeCompare(b.month));
+
+  // For the LATEST in-progress month, attach a 'comparable_prev' object with the
+  // previous month's values pro-rated to the same day count. This enables
+  // apples-to-apples deltas in the UI.
+  for (let i = 1; i < months.length; i++) {
+    const cur = months[i];
+    if (!cur.in_progress) continue;
+    const prev = months[i - 1];
+    if (!prev || prev.in_progress) continue;
+    // Pro-rate prev month's additive metrics to cur.days_with_data
+    const frac = cur.days_with_data / prev.days_in_month;
+    cur.comparable_prev = {
+      month: prev.month,
+      days: cur.days_with_data,
+      label: `first ${cur.days_with_data} of ${prev.days_in_month} days`,
+    };
+    for (const k of additive) {
+      if (prev[k] !== null && prev[k] !== undefined) {
+        cur.comparable_prev[k] = Math.round(prev[k] * frac);
+      }
+    }
+  }
+
+  return months;
 }
 function costPerNewSub(row) {
   if (!row.meta_spend || !row.new_patreon_subs) return null;
@@ -1211,6 +1318,12 @@ function renderMoneyKpis() {
   const latest = data[data.length - 1];
   const prev = data.length > 1 ? data[data.length - 2] : null;
   const periodLabel = state.view === 'weekly' ? 'this week' : 'this month';
+  const isInProgress = state.view === 'monthly' && latest.in_progress;
+  const cmpPrev = isInProgress ? latest.comparable_prev : null;
+  const prevMonthName = cmpPrev ? fmtMonthLabel(cmpPrev.month + '-01').split(' ')[0] : null;
+  const periodSuffix = isInProgress
+    ? `${latest.days_with_data} of ${latest.days_in_month} days · vs ${prevMonthName} same period`
+    : null;
 
   // Stock metrics: walk back to last non-null value
   const mrrRes = latestValue(data, 'patreon_mrr');
@@ -1226,23 +1339,37 @@ function renderMoneyKpis() {
 
   // Flow metrics: this period's value only (don't carry over)
   const newSubs = latest.new_patreon_subs;
-  const newSubsDelta = (prev && prev.new_patreon_subs !== null) ? fmtDelta(newSubs, prev.new_patreon_subs) : null;
+  let newSubsDelta = null;
+  if (newSubs !== null) {
+    if (cmpPrev && cmpPrev.new_patreon_subs !== undefined) {
+      newSubsDelta = fmtDelta(newSubs, cmpPrev.new_patreon_subs);
+    } else if (prev && prev.new_patreon_subs !== null) {
+      newSubsDelta = fmtDelta(newSubs, prev.new_patreon_subs);
+    }
+  }
 
   const cancels = latest.paid_cancellations;
   let cancelsDelta = null;
-  if (cancels !== null && prev && prev.paid_cancellations !== null) {
-    const raw = fmtDelta(cancels, prev.paid_cancellations);
-    cancelsDelta = {
-      text: raw.text,
-      cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
-    };
+  if (cancels !== null) {
+    let prevCancels = null;
+    if (cmpPrev && cmpPrev.paid_cancellations !== undefined) prevCancels = cmpPrev.paid_cancellations;
+    else if (prev && prev.paid_cancellations !== null) prevCancels = prev.paid_cancellations;
+    if (prevCancels !== null) {
+      const raw = fmtDelta(cancels, prevCancels);
+      cancelsDelta = {
+        text: raw.text,
+        cls: raw.cls === 'up' ? 'down' : raw.cls === 'down' ? 'up' : 'flat'
+      };
+    }
   }
 
   // Net growth only valid when both numbers exist
   const netGrowth = (newSubs !== null && cancels !== null) ? newSubs - cancels : null;
 
   const cps = costPerNewSub(latest);
-  const cpsPrev = prev ? costPerNewSub(prev) : null;
+  const cpsPrev = cmpPrev
+    ? costPerNewSub(cmpPrev)
+    : prev ? costPerNewSub(prev) : null;
   let cpsDelta = null;
   if (cps !== null && cpsPrev !== null) {
     const raw = fmtDelta(cps, cpsPrev);
@@ -1256,19 +1383,21 @@ function renderMoneyKpis() {
     renderKpiTile('Patreon MRR', fmt(mrr, 'currency'), mrrDelta,
       totalSubsRes.value !== null ? `Total paid subs: ${fmt(totalSubsRes.value, 'number')}` : 'Awaiting Patreon snapshot'),
     renderKpiTile(`New subs ${periodLabel}`, fmt(newSubs, 'number'), newSubsDelta,
-      latest.meta_spend !== null ? `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}` : 'Awaiting weekly data'),
-    renderCancellationsTile(cancels, cancelsDelta, netGrowth),
+      periodSuffix || (latest.meta_spend !== null ? `${fmt(latest.meta_spend, 'currency')} ad spend ${periodLabel}` : 'Awaiting weekly data')),
+    renderCancellationsTile(cancels, cancelsDelta, netGrowth, periodSuffix),
     renderCostPerSubTile(cps, cpsDelta),
   ].join('');
 }
 
 /* Cancellations tile — shows the churn flow and net growth context */
-function renderCancellationsTile(cancels, cancelsDelta, netGrowth) {
+function renderCancellationsTile(cancels, cancelsDelta, netGrowth, periodSuffix) {
   const deltaHtml = cancelsDelta
     ? `<div><span class="kpi-delta ${cancelsDelta.cls}">${cancelsDelta.text}</span></div>` : '';
 
   let contextHtml = '';
-  if (netGrowth !== null) {
+  if (periodSuffix) {
+    contextHtml = `<div class="kpi-context">${periodSuffix}</div>`;
+  } else if (netGrowth !== null) {
     const netClass = netGrowth > 0 ? 'good' : netGrowth < 0 ? 'bad' : 'flat';
     const netSign = netGrowth > 0 ? '+' : '';
     contextHtml = `
@@ -1335,18 +1464,29 @@ function renderAudienceKpis() {
     return;
   }
 
-  // Each metric: latest known value + delta vs previous known value
+  // Each metric: latest known value + delta vs previous known value.
+  // In monthly view, use comparable_prev for in-progress months (same-day comparison).
   function kpiFor(key, label) {
     const cur = latestValue(data, key);
     if (cur.value === null) {
       return renderKpiTile(label, '—', null, 'Awaiting data');
     }
     let delta = null;
-    if (cur.index > 0) {
+    let context = '';
+
+    const curRow = data[cur.index];
+    const isInProgress = state.view === 'monthly' && curRow && curRow.in_progress;
+
+    if (isInProgress && curRow.comparable_prev && curRow.comparable_prev[key] !== undefined) {
+      // Same-day-count comparison
+      delta = fmtDelta(cur.value, curRow.comparable_prev[key]);
+      const prevName = fmtMonthLabel(curRow.comparable_prev.month + '-01').split(' ')[0];
+      context = `${curRow.days_with_data} of ${curRow.days_in_month} days · vs ${prevName} same period`;
+    } else if (cur.index > 0) {
       const earlier = latestValue(data.slice(0, cur.index), key);
       if (earlier.value !== null) delta = fmtDelta(cur.value, earlier.value);
     }
-    return renderKpiTile(label, fmt(cur.value, 'number'), delta);
+    return renderKpiTile(label, fmt(cur.value, 'number'), delta, context);
   }
 
   document.getElementById('audience-kpis').innerHTML = [
@@ -1524,8 +1664,12 @@ function renderTable() {
   const headers = [state.view === 'weekly' ? 'Week' : 'Month', ...cols.map(c => c.label)];
   const reversed = [...data].reverse();
   const rows = reversed.map(row => {
+    let label = labelFn(row[xKey]);
+    if (state.view === 'monthly' && row.in_progress) {
+      label += ` <span class="in-progress-badge">in progress · ${row.days_with_data}/${row.days_in_month}d</span>`;
+    }
     const cells = [
-      `<td>${labelFn(row[xKey])}</td>`,
+      `<td>${label}</td>`,
       ...cols.map(c => {
         const v = row[c.key];
         return v === null || v === undefined
