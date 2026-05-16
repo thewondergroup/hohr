@@ -603,6 +603,38 @@
     font-weight: 600;
   }
 
+  /* Episode row variant — extends bar-row for the Top Episodes panel */
+  .episode-row {
+    grid-template-columns: 1fr auto;
+    padding: 10px 0;
+  }
+  .episode-rank {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    background: var(--paper-2); border-radius: 11px;
+    font-size: 11px; font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .episode-title {
+    max-width: 240px;
+    font-weight: 500;
+  }
+  .episode-meta {
+    text-align: right;
+    line-height: 1.3;
+  }
+  .episode-downloads {
+    font-weight: 700; font-size: 13px;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .episode-date {
+    font-size: 11px; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
   /* Cancellation reasons panel — reuses audience-panel + bar-row primitives,
      so styling stays consistent across the dashboard. The :first-letter bump
      just helps reason labels read as proper sentences. */
@@ -1193,6 +1225,8 @@
       <div class="kpi-grid cols-3" id="listens-kpis"></div>
       <div class="charts" id="listens-charts" style="margin-top: 16px"></div>
 
+      <div id="top-episodes-container" style="margin-top: 16px"></div>
+
       <div class="audience-shape" id="audience-shape">
         <div class="audience-panel" data-panel-kind="locations">
           <div class="audience-panel-header">
@@ -1373,6 +1407,111 @@ const CONFIG = {
   // From Acast export: 99 actual episodes + 1 trailer. Update when new episodes drop.
   EPISODES_RELEASED_TOTAL: 99,           // cumulative episodes since launch (excludes trailer)
   EPISODES_PER_MONTH_AVG: 2.2,           // ~2 eps/month typical cadence
+
+  // Per-episode lifetime download counts. From Acast > Stats > Episodes export.
+  // Refresh quarterly. Sort order in this array doesn't matter — the dashboard sorts.
+  // TODO: Move to a sheet tab when next reviewing schema (low priority — updates ~2 a month).
+  EPISODES: [
+    { title: "S1 Ep1 - Avernus", published: '2022-11-01', downloads: 30888 },
+    { title: "S1 Ep2 - Best Laid Plans...", published: '2022-11-01', downloads: 18944 },
+    { title: "S1 Ep3 - Styx and Groans", published: '2022-11-14', downloads: 16554 },
+    { title: "S1 Ep4 - The King and Die", published: '2022-11-28', downloads: 15412 },
+    { title: "S1 Ep5 - 'It's A-Maze-Thing", published: '2022-12-12', downloads: 14077 },
+    { title: "S1 Ep7 - Soul Traders", published: '2023-01-09', downloads: 13932 },
+    { title: "S1 Ep6 - New Level, Who Dis?", published: '2022-12-26', downloads: 13776 },
+    { title: "S1 Ep8 - You're Pulling My Greg", published: '2023-01-23', downloads: 12966 },
+    { title: "S1 Ep9 - Global Worming", published: '2023-02-06', downloads: 12717 },
+    { title: "S1 Ep10 - Blinders Keepers", published: '2023-02-20', downloads: 12376 },
+    { title: "S1 Ep 11 - Thundenstruck", published: '2023-03-06', downloads: 11805 },
+    { title: "S1 Ep13 - Of Mind and Men", published: '2023-04-03', downloads: 11553 },
+    { title: "S1 Ep14 - Lies and Diception", published: '2023-04-17', downloads: 11407 },
+    { title: "S1 Ep12 - Air Ship Happens", published: '2023-03-20', downloads: 11356 },
+    { title: "Bonus- 'When Hell Freezes Over'", published: '2022-12-19', downloads: 11049 },
+    { title: "S1 Ep16 - Gluebhog Day", published: '2023-05-15', downloads: 11004 },
+    { title: "S1 Ep15 - Devilled eggs", published: '2023-05-01', downloads: 10695 },
+    { title: "S1 Ep17- I spy", published: '2023-05-29', downloads: 10603 },
+    { title: "S1 Ep18 - Into the Scaro-Verse", published: '2023-06-26', downloads: 10302 },
+    { title: "S1 Ep19 - Chaos Theory", published: '2023-08-07', downloads: 10133 },
+    { title: "S1 Ep20 - Devil May Spy", published: '2023-08-21', downloads: 9930 },
+    { title: "S1 Ep21 - Sorry Not Sporey", published: '2023-09-04', downloads: 9921 },
+    { title: "S1. Ep22 - The Tortoise and the Scare", published: '2023-10-30', downloads: 9890 },
+    { title: "S1 Ep 24 - Doppelganger Management", published: '2023-11-27', downloads: 9267 },
+    { title: "S1 Ep29 - Suspicious Minds", published: '2024-03-04', downloads: 9220 },
+    { title: "S1 Ep23 - Missing in Traction", published: '2023-11-13', downloads: 9206 },
+    { title: "S1 EP 25 - Infernal Planes, Trains and Automobiles", published: '2023-12-11', downloads: 9017 },
+    { title: "S1 Ep 26 - Mixologenie", published: '2024-01-08', downloads: 8820 },
+    { title: "S1 Ep 27 - The Big Friendly Colossus", published: '2024-01-22', downloads: 8635 },
+    { title: "S1 Ep 30 - The Hills Have Ice", published: '2024-03-18', downloads: 8623 },
+    { title: "S1 Ep28 - Dice Guys Finish Last", published: '2024-02-05', downloads: 8579 },
+    { title: "S1 EP 31 - Dancing in the Moonbeam", published: '2024-04-01', downloads: 8277 },
+    { title: "S1 Ep 32 - Dex Save The Last Dance", published: '2024-04-15', downloads: 7950 },
+    { title: "S1 Ep 33 - Friends in Ice Places", published: '2024-04-29', downloads: 7842 },
+    { title: "S1 Ep 35 - Mushroom and Chive", published: '2024-05-27', downloads: 7818 },
+    { title: "S1 Ep 34 - The Bigger They Are The Harder They Paul", published: '2024-05-13', downloads: 7784 },
+    { title: "S1 Ep 39 - You\u2019ve Only Got Yourself To Shame", published: '2024-07-22', downloads: 7635 },
+    { title: "S1 Ep 43 - Les Whisperables", published: '2024-09-16', downloads: 7555 },
+    { title: "S1 Ep 36 - Byebarian", published: '2024-06-10', downloads: 7439 },
+    { title: "S1 Ep 37 - Aside With Me", published: '2024-06-24', downloads: 7394 },
+    { title: "S1 Ep 38 - Once Upon a Time in Hellywood", published: '2024-07-08', downloads: 7384 },
+    { title: "S1 Ep 41- The Way The Papa Crumbles", published: '2024-08-19', downloads: 7300 },
+    { title: "S1 Ep 49 - The Happy Byes", published: '2024-12-09', downloads: 7294 },
+    { title: "S2 Ep 1 - Brekkus of Champignons", published: '2025-07-14', downloads: 7256 },
+    { title: "S1.5 Ep 1 -  Once upon a Tom", published: '2025-03-03', downloads: 7231 },
+    { title: "S1 Ep 40 - Raising The Dead", published: '2024-08-05', downloads: 7215 },
+    { title: "S1 Ep 42 The Velsharoom Where it Happens", published: '2024-09-02', downloads: 7149 },
+    { title: "S1 Ep 53 - You Can't Handle The Proof ", published: '2025-02-03', downloads: 7090 },
+    { title: "S1 Ep 44 - Dicetopian Fiction", published: '2024-09-30', downloads: 6993 },
+    { title: "S1 Ep 48 - The Bee Team", published: '2024-11-25', downloads: 6980 },
+    { title: "S1 Ep 45 - Army of Two", published: '2024-10-14', downloads: 6977 },
+    { title: "S1 Ep 51 - The Last Mindbender", published: '2025-01-06', downloads: 6850 },
+    { title: "S1 Ep 50 - Another One Bites the Dust", published: '2024-12-23', downloads: 6822 },
+    { title: "S1 Ep 52 - Judgement Dave", published: '2025-01-20', downloads: 6778 },
+    { title: "S1 Ep 46 - The Tortured and the Scared", published: '2024-10-28', downloads: 6743 },
+    { title: "S1 Ep 54 - A Hell of A Story to Tell", published: '2025-02-17', downloads: 6720 },
+    { title: "S1 Ep 47 - Blood Brothers", published: '2024-11-11', downloads: 6580 },
+    { title: "S1.5 Ep 2 - From Innocence Springs Wickedness", published: '2025-03-03', downloads: 6115 },
+    { title: "S2 EP2- Vrock and Rolls", published: '2025-07-28', downloads: 5970 },
+    { title: "The Happy Boy Who Lived", published: '2025-07-07', downloads: 5939 },
+    { title: "S1.5 Ep 4 - God's Squad", published: '2025-03-17', downloads: 5587 },
+    { title: "S 1.5 Ep 3 - Tower Hour", published: '2025-03-10', downloads: 5587 },
+    { title: "S1.5 Ep 5 - Fly Society", published: '2025-03-24', downloads: 5415 },
+    { title: "S2 Ep 3 - Tower Rangers", published: '2025-08-11', downloads: 5410 },
+    { title: "FEED SWAP  - The Apocalypse Players - Saturnine Chalice Pt1", published: '2024-11-18', downloads: 5361 },
+    { title: "S2 Ep 4 - Multiversally Challenged", published: '2025-08-25', downloads: 5220 },
+    { title: "S1.5 Ep 8 - Stake it or Leave it", published: '2025-04-14', downloads: 5179 },
+    { title: "S 1.5 Ep 6 - Avoiding Ignominy", published: '2025-03-31', downloads: 5136 },
+    { title: "S2 Ep 6 - Clonely You", published: '2025-09-22', downloads: 5076 },
+    { title: "S1.5 Ep 9 - Whispers of The James Woods", published: '2025-04-21', downloads: 5052 },
+    { title: "S2 Ep5 - Four Play", published: '2025-09-08', downloads: 5045 },
+    { title: "S1.5 Ep 10 - 'Elf Unsafety'", published: '2025-04-28', downloads: 5014 },
+    { title: "S1.5 Ep 7-  My Shadow and Me", published: '2025-04-07', downloads: 4981 },
+    { title: "S2 Ep 7 - Up, Up and Away", published: '2025-10-06', downloads: 4925 },
+    { title: "S1.5 Ep 11 - Dragons and Dungeons", published: '2025-05-05', downloads: 4841 },
+    { title: "S1.5 Ep 17 - Prophet Sharing", published: '2025-06-16', downloads: 4793 },
+    { title: "S 1.5 Ep 12 - The Scales of War", published: '2025-05-12', downloads: 4712 },
+    { title: "S1.5 Ep 13 - Gluebrick Follows Part 1", published: '2025-05-19', downloads: 4655 },
+    { title: "S2 Ep 10 - Murder on the Pax-Orient Express", published: '2025-11-17', downloads: 4565 },
+    { title: "S2 Ep 9 - Save Our Soulsbury", published: '2025-11-03', downloads: 4562 },
+    { title: "S2 Ep 8 - Moby Doc", published: '2025-10-20', downloads: 4539 },
+    { title: "S1.5 Ep 15 - Sea Tales", published: '2025-06-02', downloads: 4496 },
+    { title: "S1.5 Ep 18 - Isle Be Seeing You", published: '2025-06-23', downloads: 4426 },
+    { title: "S1.5 Ep 19 - Morkoth Than Meets The Eye", published: '2025-06-30', downloads: 4381 },
+    { title: "S2 Ep 11 - Pair-a-Dice City", published: '2025-12-01', downloads: 4351 },
+    { title: "S1.5 Ep 14 - Gluebrick Follows Part II", published: '2025-05-26', downloads: 4341 },
+    { title: "S1.5  Ep 20 - Happy Everly After", published: '2025-07-07', downloads: 4269 },
+    { title: "S2 Ep 13 - You Brekkus It You Buy It", published: '2025-12-29', downloads: 4264 },
+    { title: "S1.5 E16 - Sea Tales Part 2", published: '2025-06-09', downloads: 4230 },
+    { title: "S2 Ep 15 - Heaven Sentenced", published: '2026-01-26', downloads: 4203 },
+    { title: "S2 Ep 12 - To Gelan Back Again", published: '2025-12-15', downloads: 4108 },
+    { title: "S2 Ep 14 - The Pumpking", published: '2026-01-12', downloads: 4046 },
+    { title: "S2 Ep 16 - General Incompetence", published: '2026-02-09', downloads: 3906 },
+    { title: "S2 Ep 17 - Agrotalypse Now", published: '2026-02-23', downloads: 3747 },
+    { title: "S2 Ep 20 - Hit the Vigtime", published: '2026-04-06', downloads: 3693 },
+    { title: "S2 Ep 18 - The Battle of Harmonia - Part One", published: '2026-03-09', downloads: 3623 },
+    { title: "S2 Ep 19 - The Battle of Harmonia - Part Two", published: '2026-03-23', downloads: 3371 },
+    { title: "S2 Ep 21 - Daylight Saving Time", published: '2026-04-20', downloads: 3045 },
+    { title: "S2 Ep 22 - Quarrel Conundrum", published: '2026-05-04', downloads: 2459 },
+  ],
 
   // Lifetime downloads by country. From Acast Location export.
   // Update by re-exporting from Acast > Analytics > Audience > Location.
@@ -2990,7 +3129,25 @@ function renderListensKpis() {
   // 2. Lifetime listens — sum across all weekly rows that have data.
   const lifetimeListens = state.weekly.reduce((s, w) => s + (w.monthly_listens || 0), 0);
 
-  // 3. Best month ever — for context. Compares all completed months.
+  // 3. Avg listeners per episode (last 6 episodes — rolling current state, not lifetime avg).
+  // The catalogue-wide avg is misleading because older episodes have years of accumulation.
+  // Last-6 gives a fair "current reach per episode" answer.
+  const episodes = (CONFIG.EPISODES || []).slice().sort((a, b) => b.published.localeCompare(a.published));
+  const recentEps = episodes.slice(0, 6);
+  let avgPerEpTile;
+  if (recentEps.length === 6) {
+    const avgPerEp = recentEps.reduce((s, e) => s + e.downloads, 0) / 6;
+    avgPerEpTile = renderKpiTile(
+      'Avg listeners per ep',
+      fmt(Math.round(avgPerEp), 'number'),
+      null,
+      'Rolling avg over last 6 episodes'
+    );
+  } else {
+    avgPerEpTile = renderKpiTile('Avg listeners per ep', '—', null, 'Awaiting episode data');
+  }
+
+  // 4. Best month ever — for context. Compares all completed months.
   const monthly = aggregateMonthly(state.weekly);
   const completedMonths = monthly.filter(m => !m.in_progress && m.monthly_listens !== null && m.monthly_listens > 0);
   let bestMonthTile;
@@ -3006,17 +3163,98 @@ function renderListensKpis() {
     bestMonthTile = renderKpiTile('Best month ever', '—', null, 'Awaiting data');
   }
 
+  // 5. Best week ever — same idea, weekly granularity.
+  const completedWeeks = (state.weekly || []).filter(w => !isWeekInProgress(w) && w.monthly_listens !== null && w.monthly_listens > 0);
+  let bestWeekTile;
+  if (completedWeeks.length > 0) {
+    const best = completedWeeks.reduce((a, b) => a.monthly_listens > b.monthly_listens ? a : b);
+    bestWeekTile = renderKpiTile(
+      'Best week ever',
+      fmt(best.monthly_listens, 'number'),
+      null,
+      `w/c ${fmtWeekLabel(best.week_starting)}`
+    );
+  } else {
+    bestWeekTile = renderKpiTile('Best week ever', '—', null, 'Awaiting data');
+  }
+
   document.getElementById('listens-kpis').innerHTML = [
     renderKpiTile('Total listens',
       listensValue !== null ? fmt(listensValue, 'number') : '—',
       listensDelta,
       listensContext),
+    avgPerEpTile,
     renderKpiTile('Lifetime listens',
       lifetimeListens > 0 ? fmt(lifetimeListens, 'number') : '—',
       null,
       lifetimeListens > 0 ? 'Since launch · Oct 2022' : 'Awaiting podcast host data'),
     bestMonthTile,
+    bestWeekTile,
   ].join('');
+}
+
+/* RENDER: TOP EPISODES — bar-list of top 10 by lifetime downloads.
+ * Uses CONFIG.EPISODES (will move to a sheet tab one day; updates infrequently).
+ * Honest framing: older episodes dominate because they've had more time to accumulate.
+ * The footer note points this out so the data doesn't read as "show is shrinking". */
+function renderTopEpisodes() {
+  const c = document.getElementById('top-episodes-container');
+  if (!c) return;
+  const eps = CONFIG.EPISODES || [];
+  if (eps.length === 0) { c.innerHTML = ''; return; }
+
+  const sorted = eps.slice().sort((a, b) => b.downloads - a.downloads);
+  const top = sorted.slice(0, 10);
+  const maxDownloads = top[0].downloads;
+
+  // Year range of the top 10 — useful colour for the footer
+  const years = top.map(e => e.published.slice(0, 4));
+  const yearMin = Math.min(...years.map(Number));
+  const yearMax = Math.max(...years.map(Number));
+
+  // Recent eps (last 6) average vs top 10 average — for context
+  const recentAvg = sorted
+    .slice()
+    .sort((a, b) => b.published.localeCompare(a.published))
+    .slice(0, 6)
+    .reduce((s, e) => s + e.downloads, 0) / 6;
+
+  const rows = top.map((ep, i) => {
+    const widthPct = (ep.downloads / maxDownloads) * 100;
+    const pubDate = fmtEpisodeDate(ep.published);
+    return `
+      <div class="bar-row episode-row">
+        <div class="bar-row-label">
+          <span class="episode-rank">${i + 1}</span>
+          <span class="bar-row-name episode-title" title="${ep.title}">${ep.title}</span>
+          <span class="bar-row-track"><span class="bar-row-fill" style="width:${widthPct.toFixed(1)}%"></span></span>
+        </div>
+        <div class="episode-meta">
+          <div class="episode-downloads">${fmt(ep.downloads, 'number')}</div>
+          <div class="episode-date">${pubDate}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  c.innerHTML = `
+    <div class="audience-panel" data-panel-kind="episodes" style="--section-color: #2d7a72;">
+      <div class="audience-panel-header">
+        <div class="label">Episodes</div>
+        <h3>Top 10 episodes by lifetime listens</h3>
+        <p>Lifetime download count, all-time. Older episodes have had longer to accumulate listens — the most recent 6 episodes average ${fmt(Math.round(recentAvg), 'number')} downloads each, which is the fairer current-state figure.</p>
+      </div>
+      <div class="audience-panel-body episodes-body">${rows}</div>
+    </div>
+  `;
+}
+
+// Short date format for episode panel: "Nov 2022" style
+function fmtEpisodeDate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m] = dateStr.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(m) - 1]} ${y}`;
 }
 
 /* RENDER: AUDIENCE SHAPE — Locations + Apps panels on the Listens tab.
@@ -3464,6 +3702,7 @@ function renderAll() {
     case 'listens':
       renderListensKpis();
       renderListensCharts();
+      renderTopEpisodes();
       renderAudienceShape();
       break;
     case 'patreon':
