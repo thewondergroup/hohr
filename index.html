@@ -706,9 +706,14 @@
    The Google Sheet needs TWO published tabs:
 
    TAB 1 — "Weekly" (column order matters):
-     week_starting | meta_spend | meta_clicks | new_patreon_subs |
+     week_starting | meta_spend | meta_clicks |
+     new_patreon_subs | paid_cancellations |
      monthly_listens | patreon_total_subs | patreon_mrr |
-     ig_followers | fb_followers | tiktok_followers | notes
+     ig_followers | fb_followers | tiktok_followers |
+     new_ig_follows | new_fb_follows |
+     ig_views | fb_views |
+     ig_link_clicks | fb_link_clicks |
+     notes
 
    TAB 2 — "Campaigns" (column order matters):
      name | platform | status | start_date | end_date | spend |
@@ -794,10 +799,10 @@ const CONFIG = {
     period: 'May 2026',
     title: "Acquisition is strong, retention needs a look",
     paragraphs: [
-      'The ad campaign is doing its job on the top of the funnel — <span class="hl">43 new paid subs in April</span>, consistent with March. The campaign cost £35 per gross new sub against an average lifetime value of £98, so each acquisition is profitable.',
-      'But <span class="hl">cancellations have grown from 20 → 30 → 37</span> across the last three months. Net paid growth in April was only +6. The cancellation reason most often cited is "my financial situation has changed", which fits the macroeconomic picture but doesn\'t make it less of a problem.',
+      'The campaign acquired <span class="hl">43 new paid subs in April</span>, consistent with March, on a total Meta spend of <span class="hl">£973</span>. That works out at £22.64 per gross paid sub against an average lifetime value of £98 — every acquisition is comfortably profitable on lifetime terms.',
+      'But <span class="hl">cancellations have grown from 20 → 30 → 37</span> across the last three reported months. Net paid growth in April was only +6. The cancellation reason most often cited is "my financial situation has changed", which fits the macroeconomic picture but doesn\'t make it less of a problem.',
       'From the cancellation data we can see, <span class="hl">around a third of paid cancellations happen within 90 days of joining</span>. A new-member retention play (welcome content, a 30-day check-in, early access to something exclusive) could meaningfully change net growth. Worth a conversation about what HOHR could do.',
-      'On the upside: Spotify crossed 11,000 listeners, the £15 Gluttony tier continues to punch above its weight (18% of subs, 40% of revenue), and the Henley Reel is still the highest-performing creative. We want 2-3 fresh Reel variants in May to spread the load before fatigue.'
+      'On the upside: the <span class="hl">£15 Gluttony tier punches above its weight</span> — only 18% of paid subs but 40% of revenue. The <span class="hl">Season 2 Henley reel</span> is the single best-performing creative in the whole campaign (£0.02 CPC, 63% of all Spotify clicks). Worth developing 2-3 fresh reel variants in May to reduce concentration risk before fatigue.'
     ]
   },
 };
@@ -892,7 +897,10 @@ function fmtDateRange(start, end) {
 
 /* AGGREGATION */
 function aggregateMonthly(weekly) {
-  const additive = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations'];
+  const additive = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations',
+                    'new_ig_follows', 'new_fb_follows',
+                    'ig_views', 'fb_views',
+                    'ig_link_clicks', 'fb_link_clicks'];
   const stock = ['monthly_listens', 'patreon_total_subs', 'patreon_mrr',
                  'ig_followers', 'fb_followers', 'tiktok_followers'];
   const buckets = {};
@@ -1343,8 +1351,11 @@ function renderAudienceKpis() {
 
   document.getElementById('audience-kpis').innerHTML = [
     kpiFor('monthly_listens', 'Monthly listens'),
-    kpiFor('ig_followers', 'Instagram followers'),
-    kpiFor('tiktok_followers', 'TikTok followers'),
+    kpiFor('ig_views', 'Instagram views'),
+    kpiFor('fb_views', 'Facebook views'),
+    kpiFor('ig_link_clicks', 'IG link clicks'),
+    kpiFor('fb_link_clicks', 'FB link clicks'),
+    kpiFor('new_ig_follows', 'New IG follows'),
   ].join('');
 }
 
@@ -1421,10 +1432,12 @@ function renderMoneyCharts() {
 function renderAudienceCharts() {
   const data = state.view === 'weekly' ? state.weekly : aggregateMonthly(state.weekly);
   const metrics = [
-    { key: 'monthly_listens', label: 'Monthly listens', format: 'number' },
-    { key: 'ig_followers',      label: 'Instagram',         format: 'number' },
-    { key: 'tiktok_followers',  label: 'TikTok',            format: 'number' },
-    { key: 'fb_followers',      label: 'Facebook',          format: 'number' },
+    { key: 'monthly_listens', label: 'Monthly listens',     format: 'number' },
+    { key: 'ig_views',        label: 'Instagram views',     format: 'number' },
+    { key: 'fb_views',        label: 'Facebook views',      format: 'number' },
+    { key: 'ig_link_clicks',  label: 'Instagram link clicks', format: 'number' },
+    { key: 'fb_link_clicks',  label: 'Facebook link clicks',  format: 'number' },
+    { key: 'new_ig_follows',  label: 'New IG follows',      format: 'number' },
   ];
   document.getElementById('audience-charts').innerHTML =
     metrics.map(m => renderChart(m, data)).join('');
@@ -1498,12 +1511,15 @@ function renderTable() {
     { key: 'patreon_total_subs',  label: 'Total subs',  format: 'number' },
     { key: 'new_patreon_subs',    label: 'New subs',    format: 'number' },
     { key: 'paid_cancellations',  label: 'Cancels',     format: 'number' },
-    { key: 'monthly_listens',   label: 'Listens',     format: 'number' },
-    { key: 'ig_followers',        label: 'IG',          format: 'number' },
-    { key: 'tiktok_followers',    label: 'TikTok',      format: 'number' },
-    { key: 'fb_followers',        label: 'FB',          format: 'number' },
+    { key: 'monthly_listens',     label: 'Listens',     format: 'number' },
     { key: 'meta_spend',          label: 'Ad spend',    format: 'currency' },
     { key: 'meta_clicks',         label: 'Ad clicks',   format: 'number' },
+    { key: 'ig_views',            label: 'IG views',    format: 'number' },
+    { key: 'fb_views',            label: 'FB views',    format: 'number' },
+    { key: 'ig_link_clicks',      label: 'IG clicks',   format: 'number' },
+    { key: 'fb_link_clicks',      label: 'FB clicks',   format: 'number' },
+    { key: 'new_ig_follows',      label: 'IG follows',  format: 'number' },
+    { key: 'new_fb_follows',      label: 'FB follows',  format: 'number' },
   ];
   const headers = [state.view === 'weekly' ? 'Week' : 'Month', ...cols.map(c => c.label)];
   const reversed = [...data].reverse();
@@ -1586,7 +1602,10 @@ async function loadData() {
 
   const weeklyNumeric = ['meta_spend', 'meta_clicks', 'new_patreon_subs', 'paid_cancellations',
     'monthly_listens', 'patreon_total_subs', 'patreon_mrr',
-    'ig_followers', 'fb_followers', 'tiktok_followers'];
+    'ig_followers', 'fb_followers', 'tiktok_followers',
+    'new_ig_follows', 'new_fb_follows',
+    'ig_views', 'fb_views',
+    'ig_link_clicks', 'fb_link_clicks'];
   state.weekly = weeklyCsv ? rowsToObjects(parseCSV(weeklyCsv), weeklyNumeric).data
     .filter(r => r.week_starting)
     .sort((a, b) => a.week_starting.localeCompare(b.week_starting)) : [];
